@@ -51,8 +51,8 @@ public class GuiLogin extends GuiScreen {
 
         try {
             this.shader = new GLSLSandboxShader("/assets/minecraft/shaders/program/novoline_menu.fsh");
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to load backgound shader", e);
+        } catch (Throwable e) {
+            this.shader = null;
         }
         initTime = System.currentTimeMillis();
     }
@@ -78,15 +78,19 @@ public class GuiLogin extends GuiScreen {
 
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
-        GlStateManager.disableCull();
-        shader.useShader(this.width, this.height, mouseX, mouseY, (System.currentTimeMillis() - initTime) / 1000f);
-        GL11.glBegin(GL11.GL_QUADS);
-        GL11.glVertex2f(-1f, -1f);
-        GL11.glVertex2f(-1f, 1f);
-        GL11.glVertex2f(1f, 1f);
-        GL11.glVertex2f(1f, -1f);
-        GL11.glEnd();
-        GL20.glUseProgram(0);
+        if (shader != null) {
+            GlStateManager.disableCull();
+            shader.useShader(this.width, this.height, mouseX, mouseY, (System.currentTimeMillis() - initTime) / 1000f);
+            GL11.glBegin(GL11.GL_QUADS);
+            GL11.glVertex2f(-1f, -1f);
+            GL11.glVertex2f(-1f, 1f);
+            GL11.glVertex2f(1f, 1f);
+            GL11.glVertex2f(1f, -1f);
+            GL11.glEnd();
+            GL20.glUseProgram(0);
+        } else {
+            drawRect(0, 0, this.width, this.height, 0xFF14171A);
+        }
         if (launched && darkTheme && fraction != 1.0049993F) {
             fraction = 1.0049993F;
         }

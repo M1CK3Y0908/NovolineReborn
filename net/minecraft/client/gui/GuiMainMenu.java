@@ -46,8 +46,8 @@ public class GuiMainMenu extends GuiScreen implements GuiYesNoCallback {
     public GuiMainMenu() {
         try {
             this.shader = new GLSLSandboxShader("/assets/minecraft/shaders/program/novoline_menu.fsh");
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to load backgound shader", e);
+        } catch (Throwable e) {
+            this.shader = null;
         }
         initTime = System.currentTimeMillis();
     }
@@ -96,14 +96,18 @@ public class GuiMainMenu extends GuiScreen implements GuiYesNoCallback {
         }
 
         GlStateManager.disableCull();
-        shader.useShader(this.width, this.height, mouseX, mouseY, (System.currentTimeMillis() - initTime) / 1000f);
-        GL11.glBegin(GL11.GL_QUADS);
-        GL11.glVertex2f(-1f, -1f);
-        GL11.glVertex2f(-1f, 1f);
-        GL11.glVertex2f(1f, 1f);
-        GL11.glVertex2f(1f, -1f);
-        GL11.glEnd();
-        GL20.glUseProgram(0);
+        if (shader != null) {
+            shader.useShader(this.width, this.height, mouseX, mouseY, (System.currentTimeMillis() - initTime) / 1000f);
+            GL11.glBegin(GL11.GL_QUADS);
+            GL11.glVertex2f(-1f, -1f);
+            GL11.glVertex2f(-1f, 1f);
+            GL11.glVertex2f(1f, 1f);
+            GL11.glVertex2f(1f, -1f);
+            GL11.glEnd();
+            GL20.glUseProgram(0);
+        } else {
+            drawRect(0, 0, this.width, this.height, 0xFF14171A);
+        }
 
         singleplayerworlds.setColor(interpolateColor(blue, blueish, fraction));
         multiplayer.setColor(interpolateColor(blue, blueish, fraction));

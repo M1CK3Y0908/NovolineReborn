@@ -15,9 +15,31 @@ public class GLSLSandboxShader {
 
     public GLSLSandboxShader(String fragmentShaderLocation) throws IOException {
         int program = glCreateProgram();
+        if (program == 0) {
+            throw new IOException("Failed to create shader program");
+        }
 
-        //glAttachShader(program, createShader(GLSLSandboxShader.class.getResourceAsStream("/assets/minecraft/shaders/program/passthrough.vsh"), GL_VERTEX_SHADER));
-        glAttachShader(program, createShader(GLSLSandboxShader.class.getResourceAsStream(fragmentShaderLocation), GL_FRAGMENT_SHADER));
+        int vertShader = 0;
+        try {
+            InputStream vertStream = GLSLSandboxShader.class.getResourceAsStream("/assets/minecraft/shaders/program/novoline_vector.vsh");
+            if (vertStream != null) {
+                vertShader = createShader(vertStream, GL_VERTEX_SHADER);
+                if (vertShader != 0) {
+                    glAttachShader(program, vertShader);
+                }
+            }
+        } catch (Throwable t) {
+            // Vertex shader fallback
+        }
+
+        InputStream fragStream = GLSLSandboxShader.class.getResourceAsStream(fragmentShaderLocation);
+        if (fragStream == null) {
+            glDeleteProgram(program);
+            throw new IOException("Fragment shader resource not found: " + fragmentShaderLocation);
+        }
+
+        int fragShader = createShader(fragStream, GL_FRAGMENT_SHADER);
+        glAttachShader(program, fragShader);
 
         glLinkProgram(program);
 
@@ -25,9 +47,10 @@ public class GLSLSandboxShader {
 
         // If linking failed
         if (linked == 0) {
-            System.err.println(glGetProgramInfoLog(program, glGetProgrami(program, GL_INFO_LOG_LENGTH)));
-
-            throw new IllegalStateException("link");
+            String log = glGetProgramInfoLog(program, glGetProgrami(program, GL_INFO_LOG_LENGTH));
+            System.err.println("GLSLSandboxShader link error: " + log);
+            glDeleteProgram(program);
+            throw new IOException("Shader link failed: " + log);
         }
 
         this.programId = program;
@@ -43,6 +66,7 @@ public class GLSLSandboxShader {
     }
 
     public void useShader(int width, int height, float mouseX, float mouseY, float time) {
+        if (this.programId == 0) return;
         glUseProgram(this.programId);
 
         glUniform2f(this.resolutionUniform, width, height);
@@ -52,6 +76,9 @@ public class GLSLSandboxShader {
 
     private int createShader(InputStream inputStream, int shaderType) throws IOException {
         int shader = glCreateShader(shaderType);
+        if (shader == 0) {
+            throw new IOException("glCreateShader failed");
+        }
 
         glShaderSource(shader, readStreamToString(inputStream));
 
@@ -61,9 +88,10 @@ public class GLSLSandboxShader {
 
         // If compilation failed
         if (compiled == 0) {
-            System.err.println(glGetShaderInfoLog(shader, glGetShaderi(shader, GL_INFO_LOG_LENGTH)));
-
-            throw new IllegalStateException("compile");
+            String log = glGetShaderInfoLog(shader, glGetShaderi(shader, GL_INFO_LOG_LENGTH));
+            System.err.println("GLSLSandboxShader compile error: " + log);
+            glDeleteShader(shader);
+            throw new IOException("Shader compile failed: " + log);
         }
 
         return shader;

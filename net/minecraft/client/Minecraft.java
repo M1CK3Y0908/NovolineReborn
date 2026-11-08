@@ -603,7 +603,7 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
         if (serverName != null) {
             displayGuiScreen(new GuiConnecting(new GuiMainMenu(), this, serverName, serverPort));
         } else {
-            displayGuiScreen(new GuiLogin());
+            displayGuiScreen(new GuiMainMenu());
         }
 
         renderEngine.deleteTexture(mojangLogo);

@@ -242,8 +242,17 @@ public class Initializer {
             Novoline.getInstance().getModuleManager().getModule(ArmorHUD.class).setEnabled(true);
             Novoline.getInstance().getModuleManager().getModule(PotionHUD.class).setEnabled(true);
 
-            if (Files.notExists(killsults.getPath())) {
-                Files.createFile(killsults.getPath());
+            if (Files.notExists(Novoline.getInstance().getDataFolder())) {
+                Files.createDirectories(Novoline.getInstance().getDataFolder());
+            }
+
+            if (killsults != null) {
+                if (killsults.getPath().getParent() != null && Files.notExists(killsults.getPath().getParent())) {
+                    Files.createDirectories(killsults.getPath().getParent());
+                }
+                if (Files.notExists(killsults.getPath())) {
+                    Files.createFile(killsults.getPath());
+                }
             }
 
             if (Novoline.getInstance().version.toCharArray()[0] == '@') {
@@ -279,30 +288,24 @@ public class Initializer {
             }*/
 
             //endregion
-            setTitle("Novoline " + Novoline.getInstance().getVersion());
+            try {
+                setTitle("Novoline " + Novoline.getInstance().getVersion());
+            } catch (Throwable ignored) {
+            }
             Novoline.getInstance().discordGUI = new DiscordGUI(Novoline.getInstance());
             Novoline.getInstance().dropDownGUI = new DropdownGUI();
             Novoline.getInstance().altRepositoryGUI = new AltRepositoryGUI(Novoline.getInstance());
 
-//            Novoline.getInstance().irc = new IRCClientBuilder(URI.create("ws://ws.novoline.wtf:2095"))
-//                    .setSecret("6zvaa5uqx8k4FMfT")
-//                    .setHashFunction(new NativeCachedHashFunction())
-//                    .setToken(AES.decrypt(System.getProperty("novo.delsyToken"), "WHTTB3KKadKgqFg5", "tJGZ2ZnM7bF6qDhs"))
-//                    .build();
-
-//            Novoline.getInstance().irc.getEventManager().register(SimpleEventListener.getInstance());
             ResourceIndex.wasInitialized = true;
             RenderEnv.wasInitialized = true;
             Blocks.fuckUp = 0x01c0c1;
             System.setProperty("java.net.preferIPv4Stack", "true");
 
         } catch (Throwable t) {
+            LOGGER.error("Fatal error during Novoline initialization", t);
             t.printStackTrace();
-            Minecraft.getInstance().shutdown();
             return;
         }
-
-        Minecraft.getInstance().displayGuiScreen(new GuiMainMenu());
     }
 
     public static boolean guiLoginIsNotPassed(GuiScreen previousScreen, GuiScreen guiScreenIn) {

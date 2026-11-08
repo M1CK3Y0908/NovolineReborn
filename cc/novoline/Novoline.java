@@ -22,7 +22,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
@@ -72,6 +74,12 @@ public final class Novoline {
 
     /* methods */
     public void onStart() {
+        try {
+            Files.createDirectories(this.dataFolder);
+        } catch (Throwable t) {
+            LOGGER.error("Failed to create data folder: " + this.dataFolder, t);
+        }
+        Initializer.getInstance().onProtection("");
     }
 
     public void onLoaded() {
@@ -137,7 +145,7 @@ public final class Novoline {
     }
 
     public String getPathString() {
-        return mc.mcDataDir.getAbsolutePath() + "\\Novoline\\";
+        return mc.mcDataDir.getAbsolutePath() + File.separator + "Novoline" + File.separator;
     }
 
     public CompletableFuture<Account> generateAlteningAlt() {
