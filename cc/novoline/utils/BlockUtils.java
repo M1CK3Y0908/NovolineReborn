@@ -79,16 +79,17 @@ public final class BlockUtils {
         return hit.facing != null ? hit.getBlockPos().offset(hit.facing) : hit.getBlockPos();
     }
 
+    public static boolean isPlaceable(Block block) {
+        if (block == null) return false;
+        return block == Blocks.glass || (block.isFullBlock() && block != Blocks.gravel && block != Blocks.sand && block != Blocks.soul_sand && block != Blocks.tnt && block != Blocks.crafting_table && block != Blocks.furnace && block != Blocks.dispenser && block != Blocks.dropper && block != Blocks.noteblock && block != Blocks.command_block && block != Blocks.pumpkin);
+    }
+
     public static boolean isScaffoldBlock(ItemStack stack) {
         if (stack == null || stack.getItem() == null || !(stack.getItem() instanceof ItemBlock)) {
             return false;
         }
         Block block = ((ItemBlock) stack.getItem()).getBlock();
-        if (block == null) return false;
-        if (block instanceof BlockContainer || block instanceof BlockFalling || block instanceof BlockLeaves) {
-            return false;
-        }
-        return block.isFullCube() || block.isFullBlock();
+        return isPlaceable(block);
     }
 
     public static int countBlocks() {

@@ -6,6 +6,7 @@ import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.BlockPos;
 import net.minecraft.util.MathHelper;
 import org.lwjgl.input.Keyboard;
+import org.lwjgl.input.Mouse;
 
 public final class MoveUtils {
 
@@ -55,7 +56,8 @@ public final class MoveUtils {
     }
 
     public static boolean jumpKeyDown() {
-        return Keyboard.isKeyDown(mc.gameSettings.keyBindJump.getKeyCode());
+        return mc.gameSettings.keyBindJump.isKeyDown()
+                || (mc.gameSettings.keyBindJump.getKeyCode() < 0 ? Mouse.isButtonDown(mc.gameSettings.keyBindJump.getKeyCode() + 100) : Keyboard.isKeyDown(mc.gameSettings.keyBindJump.getKeyCode()));
     }
 
     public static double inputAngle() {
@@ -171,22 +173,41 @@ public final class MoveUtils {
     }
 
     public static int posYDecimals() {
-        double d = Math.abs(mc.player.posY % 1.0);
-        return (int) Math.round(d * 10000.0);
+        return (int) Math.round(mc.player.posY % 1.0 * 10000.0);
     }
 
     public static int motionYDecimals() {
-        double d = Math.abs(mc.player.motionY % 1.0);
-        return (int) Math.round(d * 100.0);
+        return (int) Math.round(mc.player.motionY % 10.0 * 10000.0);
     }
 
-    public static boolean nearEdge(double dist) {
-        return mc.world.getCollidingBoundingBoxes(mc.player, mc.player.getEntityBoundingBox().offset(0.0, -0.5, 0.0).expand(-dist, 0.0, -dist)).isEmpty();
+    public static boolean nearEdge(double margin) {
+        int x = MathHelper.floor_double(mc.player.posX);
+        int y = MathHelper.floor_double(mc.player.posY - 0.01);
+        int z = MathHelper.floor_double(mc.player.posZ);
+        BlockPos pos = new BlockPos(x, y, z);
+        if (mc.world.isAirBlock(pos)) {
+            return true;
+        }
+        double fx = mc.player.posX - (double) x;
+        double fz = mc.player.posZ - (double) z;
+        return (fx < margin && mc.world.isAirBlock(new BlockPos(x - 1, y, z)))
+                || (fx > 1.0 - margin && mc.world.isAirBlock(new BlockPos(x + 1, y, z)))
+                || (fz < margin && mc.world.isAirBlock(new BlockPos(x, y, z - 1)))
+                || (fz > 1.0 - margin && mc.world.isAirBlock(new BlockPos(x, y, z + 1)));
+    }
+
+    public static boolean isAirBelow(double x, double y, double z) {
+        BlockPos pos = new BlockPos(x, y - (double) (y % 1.0 == 0.0 ? 1 : 0), z);
+        return mc.world.isAirBlock(pos);
     }
 
     public static boolean isAirBelow() {
-        BlockPos pos = new BlockPos(mc.player.posX, mc.player.posY - 1.0, mc.player.posZ);
-        return BlockUtils.isReplaceable(pos);
+        return isAirBelow(mc.player.posX, mc.player.posY, mc.player.posZ);
+    }
+
+    public static void jump(double speed) {
+        strafe(speed);
+        mc.player.jump();
     }
 
     public static void multiplyMotion(double mult) {
