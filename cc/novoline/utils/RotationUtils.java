@@ -273,7 +273,7 @@ public final class RotationUtils {
     public static float[] searchBlockRotation(BlockPos pos, EnumFacing facing, float offset, Precision precision, float airYaw, boolean playerYaw) {
         float bestYaw = 0.0f;
         float bestPitch = 0.0f;
-        float base = playerYaw ? mc.player.rotationYaw : (mc.player.onGround ? MoveUtils.movementAngle() : airYaw);
+        float base = playerYaw ? mc.player.rotationYaw : (mc.player.onGround ? MoveUtils.movementAngle() : (airYaw != 0.0f ? airYaw : (MoveUtils.isMoving() ? MoveUtils.movementAngle() : mc.player.rotationYaw)));
         float from = base + offset;
         float to = base + 170.0f;
         float reach = mc.playerController.getBlockReachDistance();

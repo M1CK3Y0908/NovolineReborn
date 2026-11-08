@@ -26,6 +26,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.entity.RenderManager;
+import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemBlock;
@@ -315,6 +316,12 @@ public final class Scaffold extends AbstractModule {
         oldSlot = mc.player.inventory.currentItem;
         startTick = mc.player.ticksExisted;
         startedAt = System.currentTimeMillis();
+        aimYaw = mc.player.rotationYaw;
+        aimPitch = 100.0f;
+
+        if (mc.gameSettings.keyBindUseItem.isKeyDown()) {
+            KeyBinding.setKeyBindState(mc.gameSettings.keyBindUseItem.getKeyCode(), false);
+        }
 
         if (slowOnEnable.get()) {
             MoveUtils.multiplyMotion(0.2);
@@ -432,15 +439,28 @@ public final class Scaffold extends AbstractModule {
         }
     }
 
-    private boolean isSupported() {
-        if (!mc.player.onGround) return false;
-        BlockPos below = BlockUtils.below(1.0);
-        return !BlockUtils.isReplaceable(below) && !MoveUtils.nearEdge(0.15);
+    private boolean isMovingTowardsAir(int targetY) {
+        if (!MoveUtils.isMoving()) return false;
+        float angle = MoveUtils.movementAngle();
+        double dx = -Math.sin(Math.toRadians(angle)) * 0.65;
+        double dz = Math.cos(Math.toRadians(angle)) * 0.65;
+        BlockPos ahead = new BlockPos(MathHelper.floor_double(mc.player.posX + dx), targetY, MathHelper.floor_double(mc.player.posZ + dz));
+        return BlockUtils.isReplaceable(ahead);
+    }
+
+    private boolean isOverFlatGround() {
+        int floorY = MathHelper.floor_double(mc.player.posY) - 2;
+        BlockPos floor = new BlockPos(MathHelper.floor_double(mc.player.posX), floorY, MathHelper.floor_double(mc.player.posZ));
+        return !BlockUtils.isReplaceable(floor) && !isMovingTowardsAir(floorY);
     }
 
     private void updatePlacement() {
         if (mc.currentScreen != null) {
             return;
+        }
+
+        if (mc.gameSettings.keyBindUseItem.isKeyDown()) {
+            KeyBinding.setKeyBindState(mc.gameSettings.keyBindUseItem.getKeyCode(), false);
         }
 
         if (autoSwap.get()) {
@@ -462,12 +482,6 @@ public final class Scaffold extends AbstractModule {
 
         BlockPos below = BlockUtils.below(1.0);
         airBelowTicks = BlockUtils.isReplaceable(below) ? ++airBelowTicks : 0;
-
-        boolean towering = MoveUtils.jumpKeyDown();
-        boolean jumpOrKeepY = fast.jump || fast.keepY;
-        if (isSupported() && !towering && !jumpOrKeepY) {
-            return;
-        }
 
         BlockPos pos = place(null, held);
         if (pos != null) {
@@ -642,9 +656,6 @@ public final class Scaffold extends AbstractModule {
         FastScaffoldMode fast = getFastScaffoldMode();
         boolean towering = MoveUtils.jumpKeyDown();
         boolean jumpOrKeepY = fast.jump || fast.keepY;
-        if (isSupported() && !towering && !jumpOrKeepY) {
-            return null;
-        }
 
         BlockPos target = search(last);
         if (target == null) return null;
@@ -652,47 +663,50 @@ public final class Scaffold extends AbstractModule {
         if (facing == null) return null;
         BlockPos against = target.offset(facing.getOpposite());
 
-        if (airBelowTicks > 0 || MoveUtils.nearEdge(0.15) || towering || jumpOrKeepY) {
-            MovingObjectPosition hit = aim(against, facing, -170.0f, aimYaw);
-            if (hit == null) {
-                return last == null ? null : place(null, itemStack);
-            }
-            RotationMode rotMode = getRotationMode();
-            switch (rotMode) {
-                case Simple:
-                    float f3 = MoveUtils.movementAngle();
-                    if (Math.abs(f3 - aimYaw) < 100.0f) {
-                        float f4 = (aimYaw - f3 + 540.0f) % 360.0f - 180.0f;
-                        float f6 = 0.0f;
-                        if (Math.abs(f4) >= 10.0f) {
-                            f6 = Math.max(-10.0f, Math.min(f4, 10.0f));
-                        }
-                        aimYaw = f3 + f6;
-                        if (mc.player.onGround) aimPitch = 82.5f;
-                    }
-                    break;
-                case Lazy:
-                    break;
-                default:
-                    break;
-            }
+        float lastYaw = aimYaw != 0.0f ? aimYaw : mc.player.rotationYaw;
+        MovingObjectPosition hit = aim(against, facing, -170.0f, lastYaw);
+        if (hit == null) {
+            Vec3 vec = BlockUtils.hitVec(against, facing);
+            hit = new MovingObjectPosition(vec, facing, against);
+            aimPitch = facing == EnumFacing.UP ? 88.0f : 82.5f;
+            if (aimYaw == 0.0f) aimYaw = mc.player.rotationYaw;
+        }
 
-            Vec3 vec3 = hit.hitVec;
-            if (mc.playerController.onPlayerRightClick(mc.player, mc.world, itemStack, against, facing, vec3)) {
-                if (silentSwing.get()) {
-                    sendPacketNoEvent(new C0APacketAnimation());
-                } else {
-                    mc.player.swingItem();
+        RotationMode rotMode = getRotationMode();
+        switch (rotMode) {
+            case Simple:
+                float f3 = MoveUtils.movementAngle();
+                if (Math.abs(f3 - aimYaw) < 100.0f) {
+                    float f4 = (aimYaw - f3 + 540.0f) % 360.0f - 180.0f;
+                    float f6 = 0.0f;
+                    if (Math.abs(f4) >= 10.0f) {
+                        f6 = Math.max(-10.0f, Math.min(f4, 10.0f));
+                    }
+                    aimYaw = f3 + f6;
+                    if (mc.player.onGround) aimPitch = 82.5f;
                 }
-                if (searchMode == 1 || (searchMode == 2 && fast.keepY)) {
-                    fast.ticks = mc.player.ticksExisted;
-                }
-                lastPlaced = target;
-                placedAt = System.currentTimeMillis();
-                placed.put(target, placedAt);
-                airBelowTicks = 0;
-                return target;
+                break;
+            case Lazy:
+                break;
+            default:
+                break;
+        }
+
+        Vec3 vec3 = hit.hitVec;
+        if (mc.playerController.onPlayerRightClick(mc.player, mc.world, itemStack, against, facing, vec3)) {
+            if (silentSwing.get()) {
+                sendPacketNoEvent(new C0APacketAnimation());
+            } else {
+                mc.player.swingItem();
             }
+            if (searchMode == 1 || (searchMode == 2 && fast.keepY)) {
+                fast.ticks = mc.player.ticksExisted;
+            }
+            lastPlaced = target;
+            placedAt = System.currentTimeMillis();
+            placed.put(target, placedAt);
+            airBelowTicks = 0;
+            return target;
         }
         return null;
     }
@@ -772,9 +786,46 @@ public final class Scaffold extends AbstractModule {
     }
 
     private BlockPos search(BlockPos last) {
+        FastScaffoldMode fast = getFastScaffoldMode();
+        boolean towering = MoveUtils.jumpKeyDown();
+        boolean jumpOrKeepY = fast.jump || fast.keepY;
+
+        int targetY = (keptY != -1 && (fast.keepY || fast == FastScaffoldMode.Float_A || fast == FastScaffoldMode.Float_B))
+                ? keptY : MathHelper.floor_double(mc.player.posY) - 1;
+
+        BlockPos under = new BlockPos(MathHelper.floor_double(mc.player.posX), targetY, MathHelper.floor_double(mc.player.posZ));
+
+        // Flat ground protection: if on solid ground and not moving towards air, NEVER place!
+        if (mc.player.onGround && !towering && !jumpOrKeepY) {
+            if (!BlockUtils.isReplaceable(under) && !isMovingTowardsAir(targetY)) {
+                return null;
+            }
+        }
+
+        // If in air, not towering, and not keepY/jump, check if simply bunny-hopping on flat ground
+        if (!mc.player.onGround && !towering && !jumpOrKeepY && isOverFlatGround()) {
+            return null;
+        }
+
+        // Direct target under feet (for towering straight up or jump-scaffolding)
+        if (!mc.player.onGround || towering || jumpOrKeepY || MoveUtils.isAirBelow()) {
+            if (BlockUtils.isReplaceable(under) && faceFor(under, last) != null) {
+                return under;
+            }
+            // Check ahead in movement direction
+            if (MoveUtils.isMoving()) {
+                float angle = MoveUtils.movementAngle();
+                double dx = -Math.sin(Math.toRadians(angle)) * 0.6;
+                double dz = Math.cos(Math.toRadians(angle)) * 0.6;
+                BlockPos ahead = new BlockPos(MathHelper.floor_double(mc.player.posX + dx), targetY, MathHelper.floor_double(mc.player.posZ + dz));
+                if (BlockUtils.isReplaceable(ahead) && faceFor(ahead, last) != null) {
+                    return ahead;
+                }
+            }
+        }
+
         List<Vec3> list = new ArrayList<>();
         searchMode = 0;
-        FastScaffoldMode fast = getFastScaffoldMode();
 
         if (keptY != -1 && fast.canFastScaffold(this)) {
             int decimals = MoveUtils.posYDecimals();
@@ -817,6 +868,7 @@ public final class Scaffold extends AbstractModule {
                             case 0:
                                 list.add(new Vec3(d2 + (double) n3, (double) n4, d));
                                 list.add(new Vec3(d2, (double) n4, d + (double) n3));
+                                list.add(new Vec3(d2, (double) (n4 + 1), d));
                                 break;
                             case 1:
                                 list.add(new Vec3(d2, (double) (n4 + n3), d));
