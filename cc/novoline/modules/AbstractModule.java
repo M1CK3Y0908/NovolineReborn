@@ -17,7 +17,7 @@ import cc.novoline.modules.configurations.property.object.StringProperty;
 import cc.novoline.modules.exceptions.LoadConfigException;
 import cc.novoline.modules.serializers.ConfigSerializer;
 import cc.novoline.modules.visual.ClickGUI;
-import cc.novoline.modules.visual.HUD;
+import cc.novoline.modules.visual.ModuleList;
 import cc.novoline.utils.ServerUtils;
 import cc.novoline.utils.Servers;
 import cc.novoline.utils.messages.MessageFactory;
@@ -367,21 +367,26 @@ public abstract class AbstractModule {
 
     public void setSuffix(String suffix) {
         if (suffix == null || !suffix.isEmpty()) {
-            switch (getModule(HUD.class).getSuffixType().get().toLowerCase()) {
-                case "simple":
-                    this.suffix = "\u00A77 " + suffix;
-                    break;
+            ModuleList ml = getModule(ModuleList.class);
+            if (ml != null) {
+                switch (ml.getSuffixType().get().toLowerCase()) {
+                    case "simple":
+                        this.suffix = "\u00A77 " + suffix;
+                        break;
 
-                case "dash":
-                    this.suffix = "\u00A77 - " + suffix;
-                    break;
+                    case "dash":
+                        this.suffix = "\u00A77 - " + suffix;
+                        break;
 
-                case "bracket":
-                    this.suffix = "\u00A77 [" + suffix + "]";
-                    break;
+                    case "bracket":
+                        this.suffix = "\u00A77 [" + suffix + "]";
+                        break;
 
-                default:
-                    this.suffix = "";
+                    default:
+                        this.suffix = "";
+                }
+            } else {
+                this.suffix = "\u00A77 " + suffix;
             }
 
         } else {
@@ -419,8 +424,8 @@ public abstract class AbstractModule {
             }
         }
 
-        if (novoline.getModuleManager().isRegistered(HUD.class)) {
-            offsetY = novoline.getModuleManager().getModule(HUD.class).getHeight(this) - 1;
+        if (novoline.getModuleManager().isRegistered(ModuleList.class)) {
+            offsetY = novoline.getModuleManager().getModule(ModuleList.class).getHeight(this) - 1;
         } else {
             offsetY = 1;
         }

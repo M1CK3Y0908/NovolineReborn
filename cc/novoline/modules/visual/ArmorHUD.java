@@ -33,24 +33,24 @@ public final class ArmorHUD extends AbstractModule {
 
     @EventTarget
     public void onRender2D(Render2DEvent event) {
-        HUD hud = getModule(HUD.class);
-        if (hud == null) {
+        ModuleList moduleList = getModule(ModuleList.class);
+        if (moduleList == null) {
             return;
         }
 
-        float scale = hud.getFontScale().get();
+        float scale = moduleList.getFontScale().get();
 
         GL11.glPushMatrix();
         GL11.glScaled(scale, scale, scale);
 
-        drawArmorHUD(event, hud);
+        drawArmorHUD(event, moduleList);
 
         GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
         GL11.glPopMatrix();
     }
 
-    private void drawArmorHUD(Render2DEvent event, HUD hud) {
-        final int color = hud.getHUDColor();
+    private void drawArmorHUD(Render2DEvent event, ModuleList moduleList) {
+        final int color = moduleList.getHUDColor();
         glPushMatrix();
 
         final List<ItemStack> stuff = new ObjectArrayList<>();
@@ -76,11 +76,11 @@ public final class ArmorHUD extends AbstractModule {
             }
 
             final int damage = item.getMaxDamage() - item.getItemDamage();
-            final String hudFont = hud.getHudFont().get();
+            final String hudFont = moduleList.getHudFont().get();
 
             final ScaledResolution resolution = event.getResolution();
-            final int scaledWidth = (int) (resolution.getScaledWidthStatic(mc) * hud.getScale());
-            final int scaledHeight = (int) (resolution.getScaledHeightStatic(mc) * hud.getScale());
+            final int scaledWidth = (int) (resolution.getScaledWidthStatic(mc) * moduleList.getScale());
+            final int scaledHeight = (int) (resolution.getScaledHeightStatic(mc) * moduleList.getScale());
 
             if (!item.isStackable()) {
                 disableStandardItemLighting();

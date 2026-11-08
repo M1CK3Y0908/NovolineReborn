@@ -329,8 +329,8 @@ public final class ItemESP extends AbstractModule {
                 || displayName.equalsIgnoreCase(RED + "Bloodlust") || displayName.equalsIgnoreCase(RED + "Artemis' Bow")
                 || displayName.equalsIgnoreCase(GREEN + "Miner's Blessing") || displayName.equalsIgnoreCase(GOLD + "Axe of Perun")
                 || displayName.equalsIgnoreCase(GOLD + "Cornucopia")) {
-            HUD hud = getModule(HUD.class);
-            return new Color(hud.getArrayRainbow((int) (System.currentTimeMillis() / 100000), 255));
+            ModuleList ml = getModule(ModuleList.class);
+            return new Color(ml.getArrayRainbow((int) (System.currentTimeMillis() / 100000), 255));
         }
 
         if (!isItemSpecial(o)) {

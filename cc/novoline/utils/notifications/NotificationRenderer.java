@@ -1,7 +1,6 @@
 package cc.novoline.utils.notifications;
 
 import cc.novoline.Novoline;
-import cc.novoline.modules.visual.HUD;
 import cc.novoline.utils.OpenGLUtil;
 import cc.novoline.utils.fonts.impl.Fonts;
 import net.minecraft.client.Minecraft;

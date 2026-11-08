@@ -3,7 +3,7 @@ package cc.novoline.gui.screen.dropdown.config;
 import cc.novoline.Novoline;
 import cc.novoline.commands.impl.ConfigCommand;
 import cc.novoline.gui.screen.dropdown.Tab;
-import cc.novoline.modules.visual.HUD;
+import cc.novoline.modules.visual.ModuleList;
 import net.minecraft.client.gui.Gui;
 
 import java.awt.*;
@@ -26,7 +26,7 @@ public class ConfigTab extends Tab {
 	}
 
 	public void drawScreen(int mouseX, int mouseY) {
-		HUD hud = Novoline.getInstance().getModuleManager().getModule(HUD.class);
+		ModuleList hud = Novoline.getInstance().getModuleManager().getModule(ModuleList.class);
 
 
 		int h = 0;

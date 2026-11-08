@@ -41,7 +41,8 @@ public class TabGUI extends AbstractModule {
     }
 
     public int getColor(){
-        return getModule(HUD.class).getHUDColor();
+        ModuleList ml = getModule(ModuleList.class);
+        return ml != null ? ml.getHUDColor() : 0xFF8A8AFF;
     }
 
     @Override

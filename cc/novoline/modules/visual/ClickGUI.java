@@ -104,7 +104,8 @@ public final class ClickGUI extends AbstractModule {
     }
 
     public int getGUIColor() {
-        return getModule(HUD.class).getColor().getRGB();
+        ModuleList ml = getModule(ModuleList.class);
+        return ml != null ? ml.getColor().getRGB() : 0xFF8A8AFF;
     }
 
     @EventTarget

@@ -2,7 +2,7 @@ package cc.novoline.utils;
 
 import cc.novoline.Novoline;
 import cc.novoline.modules.combat.KillAura;
-import cc.novoline.modules.visual.HUD;
+import cc.novoline.modules.visual.ModuleList;
 import cc.novoline.modules.visual.PlayerESP;
 import cc.novoline.utils.fonts.api.FontRenderer;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -310,7 +310,7 @@ public final class RenderUtils {
 
     public static void drawHorizontal(String s, float x, float y) {
         float posX = x;
-        HUD hud = Novoline.getInstance().getModuleManager().getModule(HUD.class);
+        ModuleList hud = Novoline.getInstance().getModuleManager().getModule(ModuleList.class);
 
         for (int i = 0; i < s.length(); i++) {
             Minecraft mc = Minecraft.getInstance();
@@ -324,7 +324,7 @@ public final class RenderUtils {
 
     public static void drawHorizontal(FontRenderer font, String s, float x, float y) {
         float posX = x;
-        HUD hud = Novoline.getInstance().getModuleManager().getModule(HUD.class);
+        ModuleList hud = Novoline.getInstance().getModuleManager().getModule(ModuleList.class);
 
         for (int i = 0; i < s.length(); i++) {
             Minecraft mc = Minecraft.getInstance();
@@ -1096,7 +1096,7 @@ public final class RenderUtils {
         GL11.glScaled(4.4, 4.4, 4.4);
         Gui.drawScaledCustomSizeModalRect((float) ((i2 + 1.5) / 4.4), (float) ((i1 + 0.2) / 4.4), 8.0f, (float) l6, 8, i6, 8, 8, 64.0f, 64.0f);
         GL11.glPopMatrix();
-        int hudColor = Novoline.getInstance().getModuleManager().getModule(HUD.class).getHUDColor();
+        int hudColor = Novoline.getInstance().getModuleManager().getModule(ModuleList.class).getHUDColor();
         Gui.drawRect(i2 + 40, i1 + 16.5, i2 + 40 + 100 * space, i1 + 27.3, new Color(0, 0, 0, 50).getRGB());
         Gui.drawRect(i2 + 40, i1 + 16.5, i2 + 40 + percent * space, i1 + 27.3, hudColor);
         Gui.drawRect(i2 + 40 + percent * space, i1 + 16.5, i2 + 40 + percent * space + diffP * space, i1 + 27.3, new Color(hudColor).darker().getRGB());

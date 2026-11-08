@@ -2,7 +2,6 @@ package net.minecraft.client.gui;
 
 import cc.novoline.Novoline;
 import cc.novoline.modules.combat.KillAura;
-import cc.novoline.modules.visual.HUD;
 import cc.novoline.modules.visual.InventoryHUD;
 import cc.novoline.modules.visual.Radar;
 import cc.novoline.modules.visual.TargetList;
@@ -162,7 +161,6 @@ public class GuiChat extends GuiScreen {
             int x = ScaleUtils.getScaledMouseCoordinates(mc, mouseX, mouseY)[0];
             int y = ScaleUtils.getScaledMouseCoordinates(mc, mouseX, mouseY)[1];
 
-            HUD hud = Novoline.getInstance().getModuleManager().getModule(HUD.class);
             Radar radar = Novoline.getInstance().getModuleManager().getModule(Radar.class);
             InventoryHUD invHUD = Novoline.getInstance().getModuleManager().getModule(InventoryHUD.class);
             TargetList targetList = Novoline.getInstance().getModuleManager().getModule(TargetList.class);
@@ -171,17 +169,17 @@ public class GuiChat extends GuiScreen {
                 x2 = aura.getThx().get() - x;
                 y2 = aura.getThy().get() - y;
                 dragTH = true;
-            } else if (invHUD != null && invHUD.isEnabled() && hover(x, y, hud)) {
-                x3 = hud.getInvx().get() - x;
-                y3 = hud.getInvy().get() - y;
+            } else if (invHUD != null && invHUD.isEnabled() && hover(x, y, invHUD)) {
+                x3 = invHUD.getInvx().get() - x;
+                y3 = invHUD.getInvy().get() - y;
                 dragInv = true;
             } else if (hover(x, y, radar) && radar.isEnabled()) {
                 x4 = radar.getX().get() - x;
                 y4 = radar.getY().get() - y;
                 dragRadar = true;
-            } else if (targetList != null && targetList.isEnabled() && hoverTL(x, y, hud)) {
-                x5 = hud.getTlx().get() - x;
-                y5 = hud.getTly().get() - y;
+            } else if (targetList != null && targetList.isEnabled() && hoverTL(x, y, targetList)) {
+                x5 = targetList.getTlx().get() - x;
+                y5 = targetList.getTly().get() - y;
                 dragTL = true;
             }
 
@@ -337,15 +335,14 @@ public class GuiChat extends GuiScreen {
             }
         }
 
-        HUD hud = Novoline.getInstance().getModuleManager().getModule(HUD.class);
         InventoryHUD invHUD = Novoline.getInstance().getModuleManager().getModule(InventoryHUD.class);
         TargetList targetList = Novoline.getInstance().getModuleManager().getModule(TargetList.class);
         if (invHUD != null && invHUD.isEnabled()) {
             ScaleUtils.scale(mc);
             RenderHelper.enableGUIStandardItemLighting();
             GlStateManager.enableDepth();
-            int x = hud.getInvx().get();
-            int y = hud.getInvy().get();
+            int x = invHUD.getInvx().get();
+            int y = invHUD.getInvy().get();
             Gui.drawRect(x, y, x + 167, y + 73, new Color(29, 29, 29, 255).getRGB());
             Gui.drawRect(x + 1, y + 13, x + 166, y + 72, new Color(40, 40, 40, 255).getRGB());
             mc.fontRendererCrack.drawString("Your Inventory", x + 3, y + 3, 0xffffffff, true);
@@ -373,50 +370,50 @@ public class GuiChat extends GuiScreen {
             int mouseCoordinatey = ScaleUtils.getScaledMouseCoordinates(mc, mouseX, mouseY)[1];
 
             if (dragInv) {
-                hud.getInvx().set(MathHelper.clamp_int(x3 + mouseCoordinatex, 1, hud.getInvx().getMaximum() - 167));
-                hud.getInvy().set(MathHelper.clamp_int(y3 + mouseCoordinatey, 1, hud.getInvy().getMaximum() - 73));
+                invHUD.getInvx().set(MathHelper.clamp_int(x3 + mouseCoordinatex, 1, invHUD.getInvx().getMaximum() - 167));
+                invHUD.getInvy().set(MathHelper.clamp_int(y3 + mouseCoordinatey, 1, invHUD.getInvy().getMaximum() - 73));
             }
 
-            if (hover(mouseCoordinatex, mouseCoordinatey, hud)) {
+            if (hover(mouseCoordinatex, mouseCoordinatey, invHUD)) {
 
-                if (hud.getInvx().get() > sr.getScaledWidthStatic(mc) - 50) {
-                    hud.getInvx().set(sr.getScaledWidthStatic(mc) - 50);
+                if (invHUD.getInvx().get() > sr.getScaledWidthStatic(mc) - 50) {
+                    invHUD.getInvx().set(sr.getScaledWidthStatic(mc) - 50);
                 }
 
-                if (hud.getInvy().get() > sr.getScaledHeightStatic(mc) - 50) {
-                    hud.getInvy().set(sr.getScaledHeightStatic(mc) - 50);
+                if (invHUD.getInvy().get() > sr.getScaledHeightStatic(mc) - 50) {
+                    invHUD.getInvy().set(sr.getScaledHeightStatic(mc) - 50);
                 }
 
                 ScaleUtils.scale(mc);
-                RenderUtils.drawBorderedRect(hud.getInvx().get(), hud.getInvy().get(), hud.getInvx().get() + 167,
-                        hud.getInvy().get() + 73, 2, 0xffffffff, new Color(0, 0, 0, 150).getRGB());
+                RenderUtils.drawBorderedRect(invHUD.getInvx().get(), invHUD.getInvy().get(), invHUD.getInvx().get() + 167,
+                        invHUD.getInvy().get() + 73, 2, 0xffffffff, new Color(0, 0, 0, 150).getRGB());
             }
         }
 
         if (targetList != null && targetList.isEnabled()) {
             ScaleUtils.scale(mc);
-            hud.renderTargetsList();
+            targetList.renderTargetsList();
 
             int x = ScaleUtils.getScaledMouseCoordinates(mc, mouseX, mouseY)[0];
             int y = ScaleUtils.getScaledMouseCoordinates(mc, mouseX, mouseY)[1];
 
             if (dragTL) {
-                hud.getTlx().set(MathHelper.clamp_int(x5 + x, 1, (int) (hud.getTlx().getMaximum() - hud.getTargetListWidthAndHeight()[0])));
-                hud.getTly().set(MathHelper.clamp_int(y5 + y, 1, (int) (hud.getTly().getMaximum() - hud.getTargetListWidthAndHeight()[1])));
+                targetList.getTlx().set(MathHelper.clamp_int(x5 + x, 1, (int) (targetList.getTlx().getMaximum() - targetList.getTargetListWidthAndHeight()[0])));
+                targetList.getTly().set(MathHelper.clamp_int(y5 + y, 1, (int) (targetList.getTly().getMaximum() - targetList.getTargetListWidthAndHeight()[1])));
             }
 
-            if (hoverTL(x, y, hud)) {
-                if (hud.getTlx().get() > sr.getScaledWidthStatic(mc) - 50) {
-                    hud.getTlx().set(sr.getScaledWidthStatic(mc) - 50);
+            if (hoverTL(x, y, targetList)) {
+                if (targetList.getTlx().get() > sr.getScaledWidthStatic(mc) - 50) {
+                    targetList.getTlx().set(sr.getScaledWidthStatic(mc) - 50);
                 }
 
-                if (hud.getTly().get() > sr.getScaledHeightStatic(mc) - 50) {
-                    hud.getTly().set(sr.getScaledHeightStatic(mc) - 50);
+                if (targetList.getTly().get() > sr.getScaledHeightStatic(mc) - 50) {
+                    targetList.getTly().set(sr.getScaledHeightStatic(mc) - 50);
                 }
 
                 ScaleUtils.scale(mc);
-                RenderUtils.drawBorderedRect(hud.getTlx().get(), hud.getTly().get() - 13, hud.getTlx().get() + hud.getTargetListWidthAndHeight()[0],
-                        hud.getTly().get() + hud.getTargetListWidthAndHeight()[1], 2, 0xffffffff, new Color(0, 0, 0, 150).getRGB());
+                RenderUtils.drawBorderedRect(targetList.getTlx().get(), targetList.getTly().get() - 13, targetList.getTlx().get() + targetList.getTargetListWidthAndHeight()[0],
+                        targetList.getTly().get() + targetList.getTargetListWidthAndHeight()[1], 2, 0xffffffff, new Color(0, 0, 0, 150).getRGB());
             }
         }
 
@@ -457,16 +454,16 @@ public class GuiChat extends GuiScreen {
         return mouseX >= aura.getThx().get() && mouseX <= aura.getThx().get() + getLength(mc.player) && mouseY >= aura.getThy().get() - 1.5 && mouseY <= aura.getThy().get() + 37.5;
     }
 
-    private boolean hover(int mouseX, int mouseY, HUD hud) {
-        return mouseX >= hud.getInvx().get() && mouseX <= hud.getInvx().get() + 167 && mouseY >= hud.getInvy().get() && mouseY <= hud.getInvy().get() + 73;
+    private boolean hover(int mouseX, int mouseY, InventoryHUD inv) {
+        return mouseX >= inv.getInvx().get() && mouseX <= inv.getInvx().get() + 167 && mouseY >= inv.getInvy().get() && mouseY <= inv.getInvy().get() + 73;
     }
 
     private boolean hover(int mouseX, int mouseY, Radar radar) {
         return mouseX >= radar.getX().get() && mouseX <= radar.getX().get() + radar.getSize().get() && mouseY >= radar.getY().get() && mouseY <= radar.getY().get() + radar.getSize().get();
     }
 
-    private boolean hoverTL(int mouseX, int mouseY, HUD hud) {
-        return mouseX >= hud.getTlx().get() && mouseX <= hud.getTlx().get() + hud.getTargetListWidthAndHeight()[0] && mouseY >= hud.getTly().get() - 13 && mouseY <= hud.getTly().get() + hud.getTargetListWidthAndHeight()[1];
+    private boolean hoverTL(int mouseX, int mouseY, TargetList tl) {
+        return mouseX >= tl.getTlx().get() && mouseX <= tl.getTlx().get() + tl.getTargetListWidthAndHeight()[0] && mouseY >= tl.getTly().get() - 13 && mouseY <= tl.getTly().get() + tl.getTargetListWidthAndHeight()[1];
     }
 
     @Override

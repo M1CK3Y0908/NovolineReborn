@@ -4,7 +4,7 @@ import cc.novoline.Novoline;
 import cc.novoline.gui.screen.setting.Manager;
 import cc.novoline.gui.screen.setting.SettingType;
 import cc.novoline.modules.AbstractModule;
-import cc.novoline.modules.visual.HUD;
+import cc.novoline.modules.visual.ModuleList;
 import cc.novoline.modules.visual.ClickGUI;
 import cc.novoline.utils.RenderUtils;
 import cc.novoline.utils.Timer;
@@ -85,7 +85,7 @@ public class Module {
             }
         }
 
-        HUD hud = Novoline.getInstance().getModuleManager().getModule(HUD.class);
+        ModuleList hud = Novoline.getInstance().getModuleManager().getModule(ModuleList.class);
         Color colorHUD = hud.getColor();
         Color white = new Color(0xFFFFFF);
 

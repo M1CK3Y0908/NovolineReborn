@@ -1,7 +1,7 @@
 package cc.novoline.utils.notifications;
 
 import cc.novoline.Novoline;
-import cc.novoline.modules.visual.HUD;
+import cc.novoline.modules.visual.ModuleList;
 import cc.novoline.utils.fonts.impl.Fonts;
 
 import java.awt.*;
@@ -64,7 +64,7 @@ public final class NotificationManager {
         notification.getTimer().reset();
 
         add(notification);
-        if(Novoline.getInstance().getModuleManager().getModule(HUD.class).getnSounds().get()) {
+        if(Novoline.getInstance().getModuleManager().getModule(ModuleList.class).getnSounds().get()) {
             if (notification.getNotificationType() == NotificationType.SUCCESS) {
                 Minecraft.getInstance().getSoundHandler().playSound(PositionedSoundRecord.create(new ResourceLocation("random.pop"), 1.0F));
             } else if (notification.getNotificationType() == NotificationType.ERROR) {

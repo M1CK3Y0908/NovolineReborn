@@ -11,7 +11,7 @@ import cc.novoline.gui.screen.alt.repository.credential.AltCredential;
 import cc.novoline.gui.screen.alt.repository.credential.AlteningAltCredential;
 import cc.novoline.gui.screen.alt.repository.hypixel.HypixelProfile;
 import cc.novoline.gui.screen.alt.repository.tclient.TClient;
-import cc.novoline.modules.visual.HUD;
+import cc.novoline.modules.visual.ModuleList;
 import cc.novoline.utils.java.FilteredArrayList;
 import cc.novoline.utils.minecraft.FakeEntityPlayer;
 import cc.novoline.utils.shader.GLSLSandboxShader;
@@ -442,7 +442,7 @@ public class AltRepositoryGUI extends GuiScreen {
             drawRect(0, 0, this.width, this.height,  new Color(0,0,0,100).getRGB()); // background
             SFBOLD_28.drawString("N  O  V  O  L  I  N  E", HORIZONTAL_MARGIN, 5, 0xFFFFFFFF);
             SFBOLD_28.drawString("N", HORIZONTAL_MARGIN, 5,
-                    this.novoline.getModuleManager().getModule(HUD.class).getHUDColor());
+                    this.novoline.getModuleManager().getModule(ModuleList.class).getHUDColor());
 
             this.apiKeyField.drawTextBox();
             this.searchField.drawTextBox();

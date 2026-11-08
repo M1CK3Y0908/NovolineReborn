@@ -29,23 +29,23 @@ public final class PotionHUD extends AbstractModule {
 
     @EventTarget
     public void onRender2D(Render2DEvent event) {
-        HUD hud = getModule(HUD.class);
-        if (hud == null) {
+        ModuleList moduleList = getModule(ModuleList.class);
+        if (moduleList == null) {
             return;
         }
 
-        float scale = hud.getFontScale().get();
+        float scale = moduleList.getFontScale().get();
 
         GL11.glPushMatrix();
         GL11.glScaled(scale, scale, scale);
 
-        drawPotionHUD(event, hud);
+        drawPotionHUD(event, moduleList);
 
         GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
         GL11.glPopMatrix();
     }
 
-    private void drawPotionHUD(Render2DEvent event, HUD hud) {
+    private void drawPotionHUD(Render2DEvent event, ModuleList moduleList) {
         if (mc.player == null) {
             return;
         }
@@ -89,13 +89,13 @@ public final class PotionHUD extends AbstractModule {
             final Color color = new Color(potion.getLiquidColor());
             final float[] newColor = Color.RGBtoHSB(color.getRed(), color.getGreen(), color.getBlue(), new float[3]);
 
-            int rgbColor = hud.getArrayListColor(counter, 255, newColor[0], j);
+            int rgbColor = moduleList.getArrayListColor(counter, 255, newColor[0], j);
 
             final ScaledResolution resolution = event.getResolution();
-            final int scaledWidth = (int) (resolution.getScaledWidthStatic(mc) * hud.getScale());
-            final int scaledHeight = (int) (resolution.getScaledHeightStatic(mc) * hud.getScale());
+            final int scaledWidth = (int) (resolution.getScaledWidthStatic(mc) * moduleList.getScale());
+            final int scaledHeight = (int) (resolution.getScaledHeightStatic(mc) * moduleList.getScale());
 
-            if (hud.getHudFont().equalsIgnoreCase("Client")) {
+            if (moduleList.getHudFont().equalsIgnoreCase("Client")) {
                 float v1 = scaledHeight - font.getHeight() + y - (hasUserInfo ? font.getHeight() + 14 : 12.5F) - yChat;
                 font.drawString(pType, (float) (scaledWidth - font.stringWidth(pType) - 2), v1, rgbColor, true);
             } else {
@@ -105,7 +105,7 @@ public final class PotionHUD extends AbstractModule {
 
             counter++;
             j -= 300;
-            y -= hud.getHudFont().equals("Vanilla") ? mc.fontRendererObj.getHeight() + 1 : font.getHeight() + 1;
+            y -= moduleList.getHudFont().equals("Vanilla") ? mc.fontRendererObj.getHeight() + 1 : font.getHeight() + 1;
         }
     }
 }

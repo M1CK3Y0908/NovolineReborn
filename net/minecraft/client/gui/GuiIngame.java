@@ -7,7 +7,7 @@ import cc.novoline.events.events.ScoreBoardEvent;
 import cc.novoline.gui.screen.dropdown.DropdownGUI;
 import cc.novoline.modules.misc.Streamer;
 import cc.novoline.modules.visual.Crosshair;
-import cc.novoline.modules.visual.HUD;
+import cc.novoline.modules.visual.ModuleList;
 import cc.novoline.utils.RenderUtils;
 import cc.novoline.utils.fonts.impl.Fonts;
 import viaversion.viafabric.ViaFabric;
@@ -533,7 +533,7 @@ public class GuiIngame extends Gui {
 
         int j1 = arraylist1.size() * getHeight();
         int k1 = p_180475_2_.getScaledHeight() / 2 + j1 / 3 + Novoline.getInstance().getModuleManager()
-                .getModule(HUD.class).getScoreboard().get();
+                .getModule(ModuleList.class).getScoreboard().get();
         byte b0 = 3;
         int j = p_180475_2_.getScaledWidth() - i - b0 + (isClientStyle() ? 6 : 9);
         int k = 0;
@@ -552,8 +552,7 @@ public class GuiIngame extends Gui {
             int i1 = p_180475_2_.getScaledWidth() - b0 + 3;
             int fix = isClientStyle() ? 1 : 0;
 
-            if (Novoline.getInstance().getModuleManager().getModule(HUD.class).getHudElements()
-                    .contains("Scoreboard")) {
+            if (Novoline.getInstance().getModuleManager().getModule(ModuleList.class).isShowScoreboard()) {
                 drawRect(j - 2, l - fix, i1, l + getHeight() - fix, 1342177280);
 
                 boolean hide = Novoline.getInstance().getModuleManager().getModule(Streamer.class)
@@ -581,8 +580,7 @@ public class GuiIngame extends Gui {
 
             if (k == arraylist1.size()) {
                 String s3 = p_180475_1_.getDisplayName();
-                if (Novoline.getInstance().getModuleManager().getModule(HUD.class).getHudElements()
-                        .contains("Scoreboard")) {
+                if (Novoline.getInstance().getModuleManager().getModule(ModuleList.class).isShowScoreboard()) {
                     drawRect(j - 2, l - getHeight() - (isClientStyle() ? 2 : 1), i1, l - 1, 1610612736);
                     drawRect(j - 2, l - 1 + fix, i1, l, 1342177280);
                     drawString(s3, j + i / 2F - getWidth(s3) / 2F - 3F, l - getHeight(), 553648127);
@@ -831,7 +829,7 @@ public class GuiIngame extends Gui {
      * Renders dragon's (boss) health on the HUD
      */
     private void renderBossHealth() {
-        if (!Novoline.getInstance().getModuleManager().getModule(HUD.class).getHudElements().contains("Bossbar")) {
+        if (!Novoline.getInstance().getModuleManager().getModule(ModuleList.class).isShowBossbar()) {
             return;
         }
         if (BossStatus.bossName != null && BossStatus.statusBarTime > 0) {
@@ -1107,8 +1105,8 @@ public class GuiIngame extends Gui {
     }
 
     private boolean isClientStyle() {
-        return Novoline.getInstance().getModuleManager().getModule(HUD.class).isEnabled() &&
-                Novoline.getInstance().getModuleManager().getModule(HUD.class).getScoreBoardStyle();
+        return Novoline.getInstance().getModuleManager().getModule(ModuleList.class).isEnabled() &&
+                Novoline.getInstance().getModuleManager().getModule(ModuleList.class).getScoreBoardStyle();
     }
 
     private float getWidth(String string) {

@@ -1,7 +1,7 @@
 package cc.novoline.gui.screen.dropdown.config;
 
 import cc.novoline.Novoline;
-import cc.novoline.modules.visual.HUD;
+import cc.novoline.modules.visual.ModuleList;
 import cc.novoline.utils.OpenGLUtil;
 import cc.novoline.utils.fonts.impl.Fonts;
 import net.minecraft.client.Minecraft;
@@ -26,7 +26,7 @@ public class ConfigButton extends Config {
 
     @Override
     public void drawScreen(int mouseX, int mouseY) {
-        HUD hud = Novoline.getInstance().getModuleManager().getModule(HUD.class);
+        ModuleList hud = Novoline.getInstance().getModuleManager().getModule(ModuleList.class);
         y = (int) (getParent().getPosY() + 15);
 
         for (Config config : getParent().getConfigs()) {

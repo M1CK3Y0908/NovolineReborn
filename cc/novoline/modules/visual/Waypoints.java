@@ -211,7 +211,7 @@ public final class Waypoints extends AbstractModule {
                 drawRect(-(SF_16.stringWidth(this.name + " " + getDistance() + "m") / 2) - 2, -6,
                         SF_16.stringWidth(this.name + " " + getDistance() + "m") / 2 + 2, -5,
                         requireNonNull(
-                                Novoline.getInstance().getModuleManager().getModule(HUD.class).getColor())
+                                Novoline.getInstance().getModuleManager().getModule(ModuleList.class).getColor())
                                 .getRGB());
                 SF_16.drawString(this.name + " " + GRAY + getDistance() + "m",
                         -(SF_16.stringWidth(this.name + " " + getDistance() + "m") / 2F), 0, 0xffffffff);

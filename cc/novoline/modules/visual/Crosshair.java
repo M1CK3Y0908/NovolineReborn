@@ -58,7 +58,7 @@ public final class Crosshair extends AbstractModule {
                 size = this.size.get();
         final boolean dynamic = this.dynamic.get();
         final int oColor = getColor(0, 0, 0, 255),
-                iColor = getModule(HUD.class).getHUDColor();
+                iColor = getModule(ModuleList.class).getHUDColor();
 
         final ScaledResolution resolution = event.getResolution();
         final int scaledWidth = resolution.getScaledWidthStatic(mc),

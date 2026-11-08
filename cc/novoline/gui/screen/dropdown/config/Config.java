@@ -2,7 +2,7 @@ package cc.novoline.gui.screen.dropdown.config;
 
 import cc.novoline.Novoline;
 import cc.novoline.commands.impl.ConfigCommand;
-import cc.novoline.modules.visual.HUD;
+import cc.novoline.modules.visual.ModuleList;
 import cc.novoline.utils.OpenGLUtil;
 import cc.novoline.utils.Timer;
 import net.minecraft.client.Minecraft;
@@ -36,7 +36,7 @@ public class Config {
 
 		boolean isSelected = parent.getSelectedConfig() == this;
 
-		HUD hud = Novoline.getInstance().getModuleManager().getModule(HUD.class);
+		ModuleList hud = Novoline.getInstance().getModuleManager().getModule(ModuleList.class);
 
 		for (Config config : parent.getConfigs()) {
 			if (config == this) {

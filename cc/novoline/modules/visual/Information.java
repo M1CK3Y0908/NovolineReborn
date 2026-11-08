@@ -41,57 +41,57 @@ public final class Information extends AbstractModule {
             return;
         }
 
-        HUD hud = getModule(HUD.class);
-        if (hud == null) {
+        ModuleList moduleList = getModule(ModuleList.class);
+        if (moduleList == null) {
             return;
         }
 
-        float scale = hud.getFontScale().get();
+        float scale = moduleList.getFontScale().get();
 
         GL11.glPushMatrix();
         GL11.glScaled(scale, scale, scale);
 
         if (infoElements.contains("UserInfo")) {
-            drawUserInfo(event, hud);
+            drawUserInfo(event, moduleList);
         }
 
         if (infoElements.contains("FPS")) {
-            drawFPS(event, hud);
+            drawFPS(event, moduleList);
         }
 
         if (infoElements.contains("Coords")) {
-            drawCoordinates(event, hud);
+            drawCoordinates(event, moduleList);
         }
 
         if (infoElements.contains("Speed")) {
-            drawSpeed(event, hud);
+            drawSpeed(event, moduleList);
         }
 
         GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
         GL11.glPopMatrix();
     }
 
-    private void drawUserInfo(Render2DEvent render2DEvent, HUD hud) {
+    private void drawUserInfo(Render2DEvent render2DEvent, ModuleList moduleList) {
         String build = "Build - " + RESET + novoline.getVersion();
         String prefix = GRAY + build + GRAY + " | " + "UID - ";
         String uid = "M1CK3Y0908";
 
         long j = Minecraft.getSystemTime();
 
-        if (hud.getHudFont().equalsIgnoreCase("Client")) {
+        if (moduleList.getHudFont().equalsIgnoreCase("Client")) {
             float uidWidth = 0;
             for (int i = 0; i < uid.length(); i++) {
                 uidWidth += font.charWidth(uid.charAt(i));
             }
             float totalWidth = font.stringWidth(prefix) + uidWidth;
-            float x = (float) ((render2DEvent.getResolution().getScaledWidthStatic(mc) * hud.getScale()) - totalWidth - 2);
-            float y = (float) ((render2DEvent.getResolution().getScaledHeightStatic(mc) * hud.getScale()) - font.getHeight() - 2);
+            float x = (float) ((render2DEvent.getResolution().getScaledWidthStatic(mc) * moduleList.getScale()) - totalWidth - 2);
+            float y = (float) ((render2DEvent.getResolution().getScaledHeightStatic(mc) * moduleList.getScale()) - font.getHeight() - 2);
 
             font.drawString(prefix, x, y, 0xFFFFFF, true);
             x += font.stringWidth(prefix);
 
             for (int i = 0; i < uid.length(); i++) {
-                font.drawString(String.valueOf(uid.charAt(i)), x, y, hud.getArrayDynamic(j, 255), true);
+                font.drawString(String.valueOf(uid.charAt(i)), x, y, moduleList.getArrayDynamic(j, 255), true);
                 x += font.charWidth(uid.charAt(i));
                 j -= 300;
             }
@@ -101,49 +101,49 @@ public final class Information extends AbstractModule {
                 uidWidth += mc.fontRendererObj.getCharWidth(uid.charAt(i));
             }
             int totalWidth = mc.fontRendererObj.getStringWidth(prefix) + uidWidth;
-            float x = (render2DEvent.getResolution().getScaledWidthStatic(mc) * hud.getScale()) - totalWidth - 1;
-            float y = (render2DEvent.getResolution().getScaledHeightStatic(mc) * hud.getScale()) - mc.fontRendererObj.getHeight() - 1;
+            float x = (render2DEvent.getResolution().getScaledWidthStatic(mc) * moduleList.getScale()) - totalWidth - 1;
+            float y = (render2DEvent.getResolution().getScaledHeightStatic(mc) * moduleList.getScale()) - mc.fontRendererObj.getHeight() - 1;
 
             mc.fontRendererObj.drawStringWithShadow(prefix, x, y, 0xFFFFFF);
             x += mc.fontRendererObj.getStringWidth(prefix);
 
             for (int i = 0; i < uid.length(); i++) {
-                mc.fontRendererObj.drawString(String.valueOf(uid.charAt(i)), x, y, hud.getArrayDynamic(j, 255), true);
+                mc.fontRendererObj.drawString(String.valueOf(uid.charAt(i)), x, y, moduleList.getArrayDynamic(j, 255), true);
                 x += mc.fontRendererObj.getCharWidth(uid.charAt(i));
                 j -= 300;
             }
         }
     }
 
-    private void drawCoordinates(Render2DEvent event, HUD hud) {
+    private void drawCoordinates(Render2DEvent event, ModuleList moduleList) {
         String xyz = String.format("\u00A7rXYZ:\u00A7f %.0f %.0f %.0f", mc.player.posX, mc.player.getEntityBoundingBox().minY, mc.player.posZ);
 
-        if (hud.getHudFont().equalsIgnoreCase("Client")) {
-            font.drawString(xyz, 1.0F, (event.getResolution().getScaledHeightStatic(mc) * hud.getScale()) - (hud.getHudFont().equals("Vanilla") ? mc.fontRendererObj.getHeight() + 1 : font.getHeight() * 1.2F), hud.getHUDColor(), true);
+        if (moduleList.getHudFont().equalsIgnoreCase("Client")) {
+            font.drawString(xyz, 1.0F, (event.getResolution().getScaledHeightStatic(mc) * moduleList.getScale()) - (moduleList.getHudFont().equals("Vanilla") ? mc.fontRendererObj.getHeight() + 1 : font.getHeight() * 1.2F), moduleList.getHUDColor(), true);
         } else {
-            mc.fontRendererObj.drawStringWithShadow(xyz, 2.0F, (event.getResolution().getScaledHeightStatic(mc) * hud.getScale()) - 10.0F, hud.getHUDColor());
+            mc.fontRendererObj.drawStringWithShadow(xyz, 2.0F, (event.getResolution().getScaledHeightStatic(mc) * moduleList.getScale()) - 10.0F, moduleList.getHUDColor());
         }
     }
 
-    private void drawFPS(@NonNull Render2DEvent event, HUD hud) {
-        final float y = (event.getResolution().getScaledHeightStatic(mc) * hud.getScale()) - (infoElements.contains("Coords") ? infoElements.contains("Speed") ? hud.getHudFont().equals("Vanilla") ? mc.fontRendererObj.getHeight() * 3 + 2 : font.getHeight() * 3.2F + 3 : hud.getHudFont().equals("Vanilla") ? mc.fontRendererObj.getHeight() * 2 + 2 : font.getHeight() * 2.2F + 1 : infoElements.contains("Speed") ? hud.getHudFont().equals("Vanilla") ? mc.fontRendererObj.getHeight() * 2 + 2 : font.getHeight() * 2.2F + 2 : hud.getHudFont().equals("Vanilla") ? mc.fontRendererObj.getHeight() + 2 : font.getHeight() * 1.2F + 1);
+    private void drawFPS(@NonNull Render2DEvent event, ModuleList moduleList) {
+        final float y = (event.getResolution().getScaledHeightStatic(mc) * moduleList.getScale()) - (infoElements.contains("Coords") ? infoElements.contains("Speed") ? moduleList.getHudFont().equals("Vanilla") ? mc.fontRendererObj.getHeight() * 3 + 2 : font.getHeight() * 3.2F + 3 : moduleList.getHudFont().equals("Vanilla") ? mc.fontRendererObj.getHeight() * 2 + 2 : font.getHeight() * 2.2F + 1 : infoElements.contains("Speed") ? moduleList.getHudFont().equals("Vanilla") ? mc.fontRendererObj.getHeight() * 2 + 2 : font.getHeight() * 2.2F + 2 : moduleList.getHudFont().equals("Vanilla") ? mc.fontRendererObj.getHeight() + 2 : font.getHeight() * 1.2F + 1);
         final String fps = RESET + "FPS: " + WHITE + mc.getDebugFPS();
 
-        if (hud.getHudFont().equalsIgnoreCase("Client")) {
-            font.drawString(fps, 1.0F, y, hud.getHUDColor(), true);
+        if (moduleList.getHudFont().equalsIgnoreCase("Client")) {
+            font.drawString(fps, 1.0F, y, moduleList.getHUDColor(), true);
         } else {
-            mc.fontRendererObj.drawStringWithShadow(fps, 2.0F, y, hud.getHUDColor());
+            mc.fontRendererObj.drawStringWithShadow(fps, 2.0F, y, moduleList.getHUDColor());
         }
     }
 
-    private void drawSpeed(@NonNull Render2DEvent event, HUD hud) {
-        final float y = (event.getResolution().getScaledHeightStatic(mc) * hud.getScale()) - (infoElements.contains("Coords") ? hud.getHudFont().equals("Vanilla") ? mc.fontRendererObj.getHeight() * 2 + 2 : font.getHeight() * 2.2F + 2 : hud.getHudFont().equals("Vanilla") ? mc.fontRendererObj.getHeight() * 2 + 2 : font.getHeight() * 1.2F + 1);
+    private void drawSpeed(@NonNull Render2DEvent event, ModuleList moduleList) {
+        final float y = (event.getResolution().getScaledHeightStatic(mc) * moduleList.getScale()) - (infoElements.contains("Coords") ? moduleList.getHudFont().equals("Vanilla") ? mc.fontRendererObj.getHeight() * 2 + 2 : font.getHeight() * 2.2F + 2 : moduleList.getHudFont().equals("Vanilla") ? mc.fontRendererObj.getHeight() * 2 + 2 : font.getHeight() * 1.2F + 1);
         String speed = String.format("%.2f", mc.player.getLastTickDistance() * 20 * (mc.timer.timerSpeed < 1 ? 1 : mc.timer.timerSpeed));
 
-        if (hud.getHudFont().equalsIgnoreCase("Client")) {
-            font.drawString("Speed: " + EnumChatFormatting.WHITE + speed + " b/s", 1.0F, y, hud.getHUDColor(), true);
+        if (moduleList.getHudFont().equalsIgnoreCase("Client")) {
+            font.drawString("Speed: " + EnumChatFormatting.WHITE + speed + " b/s", 1.0F, y, moduleList.getHUDColor(), true);
         } else {
-            mc.fontRendererObj.drawStringWithShadow("Speed: " + EnumChatFormatting.WHITE + speed + " b/s", 2.0F, y, hud.getHUDColor());
+            mc.fontRendererObj.drawStringWithShadow("Speed: " + EnumChatFormatting.WHITE + speed + " b/s", 2.0F, y, moduleList.getHUDColor());
         }
     }
 

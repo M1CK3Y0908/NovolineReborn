@@ -3,7 +3,7 @@ package cc.novoline.gui.screen.dropdown;
 import cc.novoline.Novoline;
 import cc.novoline.modules.AbstractModule;
 import cc.novoline.modules.EnumModuleType;
-import cc.novoline.modules.visual.HUD;
+import cc.novoline.modules.visual.ModuleList;
 import cc.novoline.utils.fonts.impl.Fonts;
 import net.minecraft.client.gui.Gui;
 
@@ -32,7 +32,7 @@ public class Tab {
     }
 
     public void drawScreen(int mouseX, int mouseY) {
-        HUD hud = Novoline.getInstance().getModuleManager().getModule(HUD.class);
+        ModuleList hud = Novoline.getInstance().getModuleManager().getModule(ModuleList.class);
 
         String l = "";
         if (enumModuleType.name().equalsIgnoreCase("Combat")) {

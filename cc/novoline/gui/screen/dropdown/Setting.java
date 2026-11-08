@@ -6,7 +6,7 @@ import cc.novoline.events.events.BindEvent;
 import cc.novoline.events.events.SettingEvent;
 import cc.novoline.gui.screen.setting.SettingType;
 import cc.novoline.modules.binds.KeyboardKeybind;
-import cc.novoline.modules.visual.HUD;
+import cc.novoline.modules.visual.ModuleList;
 import cc.novoline.modules.visual.ClickGUI;
 import cc.novoline.utils.RenderUtils;
 import cc.novoline.utils.Timer;
@@ -50,7 +50,7 @@ public class Setting {
 
     public void drawScreen(int mouseX, int mouseY) {
         int y = getY();
-        HUD hud = Novoline.getInstance().getModuleManager().getModule(HUD.class);
+        ModuleList hud = Novoline.getInstance().getModuleManager().getModule(ModuleList.class);
         ScaledResolution scaledResolution = new ScaledResolution(Minecraft.getInstance());
         boolean scissor = scaledResolution.getScaleFactor() != 1;
         double clamp = MathHelper.clamp_double(Minecraft.getInstance().getDebugFPS() / 30, 1, 9999);

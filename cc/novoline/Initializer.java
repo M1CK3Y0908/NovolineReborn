@@ -138,7 +138,7 @@ public class Initializer {
                 isDev = true;
 
                 register("sprint", Sprint::new);
-                register("hud", HUD::new);
+                register("module_list", ModuleList::new);
                 register("watermark", Watermark::new);
                 register("information", Information::new);
                 register("armor_hud", ArmorHUD::new);
@@ -235,7 +235,7 @@ public class Initializer {
             EventManager.register(Novoline.getInstance().getModuleManager().getModule(ClickGUI.class));
             Killsults killsults = Novoline.getInstance().getModuleManager().getModule(Killsults.class);
 
-            Novoline.getInstance().getModuleManager().getModule(HUD.class).setEnabled(true);
+            Novoline.getInstance().getModuleManager().getModule(ModuleList.class).setEnabled(true);
             Novoline.getInstance().getModuleManager().getModule(Watermark.class).setEnabled(true);
             Novoline.getInstance().getModuleManager().getModule(Information.class).setEnabled(true);
             Novoline.getInstance().getModuleManager().getModule(ArmorHUD.class).setEnabled(true);

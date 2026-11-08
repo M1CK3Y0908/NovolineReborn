@@ -1,7 +1,7 @@
 package net.minecraft.client.gui;
 
 import cc.novoline.Novoline;
-import cc.novoline.modules.visual.HUD;
+import cc.novoline.modules.visual.ModuleList;
 import cc.novoline.utils.RenderUtils;
 import cc.novoline.utils.fonts.impl.Fonts;
 import com.google.common.collect.Lists;
@@ -339,8 +339,8 @@ public class GuiNewChat extends Gui {
     }
 
     private boolean isClientStyle() {
-        return Novoline.getInstance().getModuleManager().getModule(HUD.class).isEnabled() &&
-                Novoline.getInstance().getModuleManager().getModule(HUD.class).getChatStyle();
+        return Novoline.getInstance().getModuleManager().getModule(ModuleList.class).isEnabled() &&
+                Novoline.getInstance().getModuleManager().getModule(ModuleList.class).getChatStyle();
     }
 
     private List<IChatComponent> getList(IChatComponent message, int i) {
