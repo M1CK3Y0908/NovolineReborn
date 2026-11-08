@@ -121,6 +121,14 @@ public final class MoveUtils {
         return moveYaw(yaw, mc.player.movementInput().getMoveForward(), mc.player.movementInput().getMoveStrafe());
     }
 
+    public static double[] movementVector() {
+        if (!isMoving()) return new double[]{0.0, 0.0};
+        float yaw = moveYaw(mc.player.rotationYaw);
+        double dx = -Math.sin(Math.toRadians(yaw));
+        double dz = Math.cos(Math.toRadians(yaw));
+        return new double[]{dx, dz};
+    }
+
     public static void setSpeed(double speed, float yaw) {
         if (speed == 0.0) {
             mc.player.motionZ = 0.0;

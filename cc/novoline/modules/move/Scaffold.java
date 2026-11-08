@@ -441,10 +441,12 @@ public final class Scaffold extends AbstractModule {
 
     private boolean isMovingTowardsAir(int targetY) {
         if (!MoveUtils.isMoving()) return false;
-        float angle = MoveUtils.movementAngle();
-        double dx = -Math.sin(Math.toRadians(angle)) * 0.65;
-        double dz = Math.cos(Math.toRadians(angle)) * 0.65;
-        BlockPos ahead = new BlockPos(MathHelper.floor_double(mc.player.posX + dx), targetY, MathHelper.floor_double(mc.player.posZ + dz));
+        double[] dir = MoveUtils.movementVector();
+        BlockPos ahead = new BlockPos(
+                MathHelper.floor_double(mc.player.posX + dir[0] * 0.7),
+                targetY,
+                MathHelper.floor_double(mc.player.posZ + dir[1] * 0.7)
+        );
         return BlockUtils.isReplaceable(ahead);
     }
 
@@ -795,32 +797,44 @@ public final class Scaffold extends AbstractModule {
 
         BlockPos under = new BlockPos(MathHelper.floor_double(mc.player.posX), targetY, MathHelper.floor_double(mc.player.posZ));
 
-        // Flat ground protection: if on solid ground and not moving towards air, NEVER place!
+        // 1. Flat ground protection: if on solid ground and not moving towards air, NEVER place!
         if (mc.player.onGround && !towering && !jumpOrKeepY) {
             if (!BlockUtils.isReplaceable(under) && !isMovingTowardsAir(targetY)) {
                 return null;
             }
         }
 
-        // If in air, not towering, and not keepY/jump, check if simply bunny-hopping on flat ground
+        // 2. If in air, not towering, and not keepY/jump, check if simply bunny-hopping on flat ground
         if (!mc.player.onGround && !towering && !jumpOrKeepY && isOverFlatGround()) {
             return null;
         }
 
-        // Direct target under feet (for towering straight up or jump-scaffolding)
-        if (!mc.player.onGround || towering || jumpOrKeepY || MoveUtils.isAirBelow()) {
-            if (BlockUtils.isReplaceable(under) && faceFor(under, last) != null) {
-                return under;
+        // 3. If standing still, on solid ground, and not towering: NEVER place! (Prevents side placing when stopped)
+        if (!MoveUtils.isMoving() && !towering && !jumpOrKeepY && !BlockUtils.isReplaceable(under)) {
+            return null;
+        }
+
+        // 4. Priority 1: Direct target under feet (for towering straight up, jumping over void, or stepping off edge)
+        if (BlockUtils.isReplaceable(under) && faceFor(under, last) != null) {
+            return under;
+        }
+
+        // 5. Priority 2: Lookahead along movement direction (STRICTLY IN THE DIRECTION OF TRAVEL!)
+        if (MoveUtils.isMoving()) {
+            double[] dir = MoveUtils.movementVector();
+            double moveX = dir[0];
+            double moveZ = dir[1];
+
+            // 0.6 blocks ahead in travel direction
+            BlockPos ahead1 = new BlockPos(MathHelper.floor_double(mc.player.posX + moveX * 0.6), targetY, MathHelper.floor_double(mc.player.posZ + moveZ * 0.6));
+            if (!ahead1.equals(under) && BlockUtils.isReplaceable(ahead1) && faceFor(ahead1, last) != null) {
+                return ahead1;
             }
-            // Check ahead in movement direction
-            if (MoveUtils.isMoving()) {
-                float angle = MoveUtils.movementAngle();
-                double dx = -Math.sin(Math.toRadians(angle)) * 0.6;
-                double dz = Math.cos(Math.toRadians(angle)) * 0.6;
-                BlockPos ahead = new BlockPos(MathHelper.floor_double(mc.player.posX + dx), targetY, MathHelper.floor_double(mc.player.posZ + dz));
-                if (BlockUtils.isReplaceable(ahead) && faceFor(ahead, last) != null) {
-                    return ahead;
-                }
+
+            // 1.0 blocks ahead in travel direction
+            BlockPos ahead2 = new BlockPos(MathHelper.floor_double(mc.player.posX + moveX * 1.0), targetY, MathHelper.floor_double(mc.player.posZ + moveZ * 1.0));
+            if (!ahead2.equals(under) && !ahead2.equals(ahead1) && BlockUtils.isReplaceable(ahead2) && faceFor(ahead2, last) != null) {
+                return ahead2;
             }
         }
 
@@ -853,9 +867,17 @@ public final class Scaffold extends AbstractModule {
     }
 
     private boolean candidates(List<Vec3> list, int mode, int y) {
-        for (int i = -5; i <= 5; ++i) {
-            for (int j = -5; j <= 5; ++j) {
-                for (int k = -3; k <= -1; ++k) {
+        boolean moving = MoveUtils.isMoving();
+        double dirX = 0.0, dirZ = 0.0;
+        if (moving) {
+            double[] dir = MoveUtils.movementVector();
+            dirX = dir[0];
+            dirZ = dir[1];
+        }
+
+        for (int i = -3; i <= 3; ++i) {
+            for (int j = -3; j <= 3; ++j) {
+                for (int k = -2; k <= 0; ++k) {
                     int n4 = MathHelper.floor_double(mc.player.posY) + k;
                     if (mode > 0 && n4 != y) continue;
                     double d2 = mc.player.posX + (double) i;
@@ -866,16 +888,16 @@ public final class Scaffold extends AbstractModule {
                     for (int n3 = -1; n3 <= 1; n3 += 2) {
                         switch (mode) {
                             case 0:
-                                list.add(new Vec3(d2 + (double) n3, (double) n4, d));
-                                list.add(new Vec3(d2, (double) n4, d + (double) n3));
-                                list.add(new Vec3(d2, (double) (n4 + 1), d));
+                                addCandidateFiltered(list, d2 + (double) n3, (double) n4, d, moving, dirX, dirZ);
+                                addCandidateFiltered(list, d2, (double) n4, d + (double) n3, moving, dirX, dirZ);
+                                addCandidateFiltered(list, d2, (double) (n4 + 1), d, moving, dirX, dirZ);
                                 break;
                             case 1:
-                                list.add(new Vec3(d2, (double) (n4 + n3), d));
+                                addCandidateFiltered(list, d2, (double) (n4 + n3), d, moving, dirX, dirZ);
                                 continue;
                             case 2:
-                                list.add(new Vec3(d2 + (double) n3, (double) n4, d));
-                                list.add(new Vec3(d2, (double) n4, d + (double) n3));
+                                addCandidateFiltered(list, d2 + (double) n3, (double) n4, d, moving, dirX, dirZ);
+                                addCandidateFiltered(list, d2, (double) n4, d + (double) n3, moving, dirX, dirZ);
                                 break;
                         }
                     }
@@ -900,25 +922,61 @@ public final class Scaffold extends AbstractModule {
             y2 -= 1.0;
         }
         final double fy = y2;
+        final boolean fMoving = moving;
+        final double fDirX = dirX;
+        final double fDirZ = dirZ;
+
         Comparator<Vec3> comparator = Comparator.comparingDouble(p -> {
             double dx = x - p.xCoord, dy = fy - p.yCoord, dz = z - p.zCoord;
-            return dx * dx + dy * dy + dz * dz;
+            double distSq = dx * dx + dy * dy + dz * dz;
+            if (fMoving) {
+                double relX = p.xCoord - x;
+                double relZ = p.zCoord - z;
+                double sideOffset = Math.abs(relX * (-fDirZ) + relZ * fDirX);
+                double forward = relX * fDirX + relZ * fDirZ;
+                distSq += sideOffset * 8.0 - forward * 2.0;
+            }
+            return distSq;
         });
 
-        if (mc.player.ticksExisted - startTick <= 3) {
-            double yaw = Math.toRadians(mc.player.rotationYaw);
-            final double dirX = -Math.sin(yaw);
-            final double dirZ = Math.cos(yaw);
-            comparator = comparator.thenComparingDouble(p -> -((p.xCoord - x) * dirX + (p.zCoord - z) * dirZ));
-        }
         list.sort(comparator);
         return true;
     }
 
+    private void addCandidateFiltered(List<Vec3> list, double x, double y, double z, boolean moving, double dirX, double dirZ) {
+        if (moving) {
+            double relX = x - mc.player.posX;
+            double relZ = z - mc.player.posZ;
+            double sideOffset = Math.abs(relX * (-dirZ) + relZ * dirX);
+            if (sideOffset > 0.75) {
+                return;
+            }
+        }
+        list.add(new Vec3(x, y, z));
+    }
+
     private BlockPos firstPlaceable(List<Vec3> list, BlockPos last) {
+        boolean moving = MoveUtils.isMoving();
+        double dirX = 0.0, dirZ = 0.0;
+        if (moving) {
+            double[] dir = MoveUtils.movementVector();
+            dirX = dir[0];
+            dirZ = dir[1];
+        }
+
         for (Vec3 vec3 : list) {
             SCRATCH.set(MathHelper.floor_double(vec3.xCoord), MathHelper.floor_double(vec3.yCoord), MathHelper.floor_double(vec3.zCoord));
             if (!BlockUtils.isReplaceable(SCRATCH) || faceFor(SCRATCH, last) == null) continue;
+
+            if (moving) {
+                double relX = ((double) SCRATCH.getX() + 0.5) - mc.player.posX;
+                double relZ = ((double) SCRATCH.getZ() + 0.5) - mc.player.posZ;
+                double sideOffset = Math.abs(relX * (-dirZ) + relZ * dirX);
+                if (sideOffset > 0.8) {
+                    continue;
+                }
+            }
+
             return new BlockPos(SCRATCH);
         }
         return null;
