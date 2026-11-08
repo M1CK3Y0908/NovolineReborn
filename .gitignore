@@ -1,0 +1,15 @@
+# Build & Output
+/out/
+/build/
+/dist/
+
+# Runtime / Client data
+/run/
+
+# IntelliJ IDEA user specific files
+.idea/workspace.xml
+.idea/shelf/
+.idea/httpRequests/
+.idea/queries/
+.idea/dataSources/
+.idea/dataSources.local.xml
