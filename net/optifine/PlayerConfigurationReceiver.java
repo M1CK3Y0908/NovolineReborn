@@ -3,36 +3,28 @@ package net.optifine;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 
-public class PlayerConfigurationReceiver implements IFileDownloadListener
-{
+public class PlayerConfigurationReceiver implements IFileDownloadListener {
     private String player = null;
 
-    public PlayerConfigurationReceiver(String p_i72_1_)
-    {
-        this.player = p_i72_1_;
+    public PlayerConfigurationReceiver(String player) {
+        this.player = player;
     }
 
-    public void fileDownloadFinished(String p_fileDownloadFinished_1_, byte[] p_fileDownloadFinished_2_, Throwable p_fileDownloadFinished_3_)
-    {
-        if (p_fileDownloadFinished_2_ != null)
-        {
-            try
-            {
-                String s = new String(p_fileDownloadFinished_2_, "ASCII");
+    @Override
+    public void fileDownloadFinished(String url, byte[] bytes, Throwable exception) {
+        if (bytes != null) {
+            try {
+                String s = new String(bytes, "ASCII");
                 JsonParser jsonparser = new JsonParser();
                 JsonElement jsonelement = jsonparser.parse(s);
                 PlayerConfigurationParser playerconfigurationparser = new PlayerConfigurationParser(this.player);
                 PlayerConfiguration playerconfiguration = playerconfigurationparser.parsePlayerConfiguration(jsonelement);
-
-                if (playerconfiguration != null)
-                {
+                if (playerconfiguration != null) {
                     playerconfiguration.setInitialized(true);
                     PlayerConfigurations.setPlayerConfiguration(this.player, playerconfiguration);
                 }
-            }
-            catch (Exception exception)
-            {
-                Config.dbg("Error parsing configuration: " + p_fileDownloadFinished_1_ + ", " + exception.getClass().getName() + ": " + exception.getMessage());
+            } catch (Exception exceptionx) {
+                Config.dbg("Error parsing configuration: " + url + ", " + exceptionx.getClass().getName() + ": " + exceptionx.getMessage());
             }
         }
     }

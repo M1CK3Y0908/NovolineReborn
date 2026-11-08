@@ -26,6 +26,7 @@ public class PropertyDefaultFastFancyOff extends Property {
         return this.getValue() == 3;
     }
 
+    @Override
     public boolean setPropertyValue(String propVal) {
         if (Config.equals(propVal, "none")) {
             propVal = "off";

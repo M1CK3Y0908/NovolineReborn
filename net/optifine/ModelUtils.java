@@ -7,93 +7,100 @@ import net.minecraft.client.resources.model.IBakedModel;
 import net.minecraft.client.resources.model.SimpleBakedModel;
 import net.minecraft.util.EnumFacing;
 
-public class ModelUtils
-{
-    public static void dbgModel(IBakedModel p_dbgModel_0_)
-    {
-        if (p_dbgModel_0_ != null)
-        {
-            Config.dbg("Model: " + p_dbgModel_0_ + ", ao: " + p_dbgModel_0_.isAmbientOcclusion() + ", gui3d: " + p_dbgModel_0_.isGui3d() + ", builtIn: " + p_dbgModel_0_.isBuiltInRenderer() + ", particle: " + p_dbgModel_0_.getParticleTexture());
+public class ModelUtils {
+    public static void dbgModel(IBakedModel model) {
+        if (model != null) {
+            Config.dbg(
+                "Model: "
+                    + model
+                    + ", ao: "
+                    + model.isAmbientOcclusion()
+                    + ", gui3d: "
+                    + model.isGui3d()
+                    + ", builtIn: "
+                    + model.isBuiltInRenderer()
+                    + ", particle: "
+                    + model.getParticleTexture()
+            );
             EnumFacing[] aenumfacing = EnumFacing.VALUES;
 
-            for (int i = 0; i < aenumfacing.length; ++i)
-            {
+            for (int i = 0; i < aenumfacing.length; i++) {
                 EnumFacing enumfacing = aenumfacing[i];
-                List list = p_dbgModel_0_.getFaceQuads(enumfacing);
+                List list = model.getFaceQuads(enumfacing);
                 dbgQuads(enumfacing.getName(), list, "  ");
             }
 
-            List list1 = p_dbgModel_0_.getGeneralQuads();
+            List list1 = model.getGeneralQuads();
             dbgQuads("General", list1, "  ");
         }
     }
 
-    private static void dbgQuads(String p_dbgQuads_0_, List p_dbgQuads_1_, String p_dbgQuads_2_)
-    {
-        for (Object bakedquad : p_dbgQuads_1_)
-        {
-            dbgQuad(p_dbgQuads_0_, (BakedQuad) bakedquad, p_dbgQuads_2_);
+    private static void dbgQuads(String name, List quads, String prefix) {
+        for (BakedQuad bakedquad : (Iterable<BakedQuad>) (Iterable) quads) {
+            dbgQuad(name, bakedquad, prefix);
         }
     }
 
-    public static void dbgQuad(String p_dbgQuad_0_, BakedQuad p_dbgQuad_1_, String p_dbgQuad_2_)
-    {
-        Config.dbg(p_dbgQuad_2_ + "Quad: " + p_dbgQuad_1_.getClass().getName() + ", type: " + p_dbgQuad_0_ + ", face: " + p_dbgQuad_1_.getFace() + ", tint: " + p_dbgQuad_1_.getTintIndex() + ", sprite: " + p_dbgQuad_1_.getSprite());
-        dbgVertexData(p_dbgQuad_1_.getVertexData(), "  " + p_dbgQuad_2_);
+    public static void dbgQuad(String name, BakedQuad quad, String prefix) {
+        Config.dbg(
+            prefix
+                + "Quad: "
+                + quad.getClass().getName()
+                + ", type: "
+                + name
+                + ", face: "
+                + quad.getFace()
+                + ", tint: "
+                + quad.getTintIndex()
+                + ", sprite: "
+                + quad.getSprite()
+        );
+        dbgVertexData(quad.getVertexData(), "  " + prefix);
     }
 
-    public static void dbgVertexData(int[] p_dbgVertexData_0_, String p_dbgVertexData_1_)
-    {
-        int i = p_dbgVertexData_0_.length / 4;
-        Config.dbg(p_dbgVertexData_1_ + "Length: " + p_dbgVertexData_0_.length + ", step: " + i);
+    public static void dbgVertexData(int[] vd, String prefix) {
+        int i = vd.length / 4;
+        Config.dbg(prefix + "Length: " + vd.length + ", step: " + i);
 
-        for (int j = 0; j < 4; ++j)
-        {
+        for (int j = 0; j < 4; j++) {
             int k = j * i;
-            float f = Float.intBitsToFloat(p_dbgVertexData_0_[k + 0]);
-            float f1 = Float.intBitsToFloat(p_dbgVertexData_0_[k + 1]);
-            float f2 = Float.intBitsToFloat(p_dbgVertexData_0_[k + 2]);
-            int l = p_dbgVertexData_0_[k + 3];
-            float f3 = Float.intBitsToFloat(p_dbgVertexData_0_[k + 4]);
-            float f4 = Float.intBitsToFloat(p_dbgVertexData_0_[k + 5]);
-            Config.dbg(p_dbgVertexData_1_ + j + " xyz: " + f + "," + f1 + "," + f2 + " col: " + l + " u,v: " + f3 + "," + f4);
+            float f = Float.intBitsToFloat(vd[k + 0]);
+            float f1 = Float.intBitsToFloat(vd[k + 1]);
+            float f2 = Float.intBitsToFloat(vd[k + 2]);
+            int l = vd[k + 3];
+            float f3 = Float.intBitsToFloat(vd[k + 4]);
+            float f4 = Float.intBitsToFloat(vd[k + 5]);
+            Config.dbg(prefix + j + " xyz: " + f + "," + f1 + "," + f2 + " col: " + l + " u,v: " + f3 + "," + f4);
         }
     }
 
-    public static IBakedModel duplicateModel(IBakedModel p_duplicateModel_0_)
-    {
-        List list = duplicateQuadList(p_duplicateModel_0_.getGeneralQuads());
+    public static IBakedModel duplicateModel(IBakedModel model) {
+        List list = duplicateQuadList(model.getGeneralQuads());
         EnumFacing[] aenumfacing = EnumFacing.VALUES;
         List list1 = new ArrayList();
 
-        for (int i = 0; i < aenumfacing.length; ++i)
-        {
+        for (int i = 0; i < aenumfacing.length; i++) {
             EnumFacing enumfacing = aenumfacing[i];
-            List list2 = p_duplicateModel_0_.getFaceQuads(enumfacing);
+            List list2 = model.getFaceQuads(enumfacing);
             List list3 = duplicateQuadList(list2);
             list1.add(list3);
         }
 
-        SimpleBakedModel simplebakedmodel = new SimpleBakedModel(list, list1, p_duplicateModel_0_.isAmbientOcclusion(), p_duplicateModel_0_.isGui3d(), p_duplicateModel_0_.getParticleTexture(), p_duplicateModel_0_.getItemCameraTransforms());
-        return simplebakedmodel;
+        return new SimpleBakedModel(list, list1, model.isAmbientOcclusion(), model.isGui3d(), model.getParticleTexture(), model.getItemCameraTransforms());
     }
 
-    public static List duplicateQuadList(List p_duplicateQuadList_0_)
-    {
-        List list = new ArrayList();
+    public static List duplicateQuadList(List list) {
+        List listx = new ArrayList();
 
-        for (Object bakedquad : p_duplicateQuadList_0_)
-        {
-            BakedQuad bakedquad1 = duplicateQuad((BakedQuad) bakedquad);
-            list.add(bakedquad1);
+        for (BakedQuad bakedquad : (Iterable<BakedQuad>) (Iterable) list) {
+            BakedQuad bakedquad1 = duplicateQuad(bakedquad);
+            listx.add(bakedquad1);
         }
 
-        return list;
+        return listx;
     }
 
-    public static BakedQuad duplicateQuad(BakedQuad p_duplicateQuad_0_)
-    {
-        BakedQuad bakedquad = new BakedQuad((int[])p_duplicateQuad_0_.getVertexData().clone(), p_duplicateQuad_0_.getTintIndex(), p_duplicateQuad_0_.getFace(), p_duplicateQuad_0_.getSprite());
-        return bakedquad;
+    public static BakedQuad duplicateQuad(BakedQuad quad) {
+        return new BakedQuad((int[])quad.getVertexData().clone(), quad.getTintIndex(), quad.getFace(), quad.getSprite());
     }
 }

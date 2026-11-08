@@ -201,6 +201,8 @@ public class RenderGlobal implements IWorldAccess, IResourceManagerReloadListene
     private int renderDistanceSq = 0;
     private static final Set<EnumFacing> SET_ALL_FACINGS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(EnumFacing.VALUES)));
     private int countTileEntitiesRendered;
+    public boolean renderOverlayDamaged = false;
+    public boolean renderOverlayEyes = false;
 
     public RenderGlobal(Minecraft mcIn) {
         this.cloudRenderer = new CloudRenderer(mcIn);

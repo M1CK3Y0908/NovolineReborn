@@ -1,13 +1,36 @@
 package net.shadersmod.client;
 
-import net.optifine.Config;
-import net.optifine.StrUtils;
-
-import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.CharArrayReader;
+import java.io.CharArrayWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import net.optifine.entity.model.anim.ExpressionParser;
+import net.optifine.entity.model.anim.ExpressionType;
+import net.optifine.entity.model.anim.IExpression;
+import net.optifine.entity.model.anim.ParseException;
+import net.optifine.Config;
+import net.optifine.StrUtils;
+import net.shadersmod.common.SMCLog;
+import net.shadersmod.uniform.CustomUniform;
+import net.shadersmod.uniform.CustomUniforms;
+import net.shadersmod.uniform.ShaderExpressionResolver;
+import net.shadersmod.uniform.UniformType;
 
 public class ShaderPackParser {
     private static final Pattern PATTERN_VERSION = Pattern.compile("^\\s*#version\\s+.*$");
@@ -17,29 +40,30 @@ public class ShaderPackParser {
     public static ShaderOption[] parseShaderPackOptions(IShaderPack shaderPack, String[] programNames, List<Integer> listDimensions) {
         if (shaderPack == null) {
             return new ShaderOption[0];
-        } else {
-            Map<String, ShaderOption> map = new HashMap();
-            collectShaderOptions(shaderPack, "/shaders", programNames, map);
-
-            for (int i : listDimensions) {
-                String s = "/shaders/world" + i;
-                collectShaderOptions(shaderPack, s, programNames, map);
-            }
-
-            Collection<ShaderOption> collection = map.values();
-            ShaderOption[] ashaderoption = (ShaderOption[]) (ShaderOption[]) collection.toArray(new ShaderOption[collection.size()]);
-            Comparator<ShaderOption> comparator = new Comparator<ShaderOption>() {
-                public int compare(ShaderOption o1, ShaderOption o2) {
-                    return o1.getName().compareToIgnoreCase(o2.getName());
-                }
-            };
-            Arrays.sort(ashaderoption, comparator);
-            return ashaderoption;
         }
+
+        Map<String, ShaderOption> map = new HashMap<>();
+        collectShaderOptions(shaderPack, "/shaders", programNames, map);
+
+        for (int i : listDimensions) {
+            String s = "/shaders/world" + i;
+            collectShaderOptions(shaderPack, s, programNames, map);
+        }
+
+        Collection<ShaderOption> collection = map.values();
+        ShaderOption[] ashaderoption = collection.toArray(new ShaderOption[collection.size()]);
+        Comparator<ShaderOption> comparator = new Comparator<ShaderOption>() {
+            public int compare(ShaderOption o1, ShaderOption o2) {
+                return o1.getName().compareToIgnoreCase(o2.getName());
+            }
+        };
+        Arrays.sort(ashaderoption, comparator);
+        return ashaderoption;
     }
 
     private static void collectShaderOptions(IShaderPack shaderPack, String dir, String[] programNames, Map<String, ShaderOption> mapOptions) {
-        for (String s : programNames) {
+        for (int i = 0; i < programNames.length; i++) {
+            String s = programNames[i];
             if (!s.equals("")) {
                 String s1 = dir + "/" + s + ".vsh";
                 String s2 = dir + "/" + s + ".fsh";
@@ -52,18 +76,19 @@ public class ShaderPackParser {
     private static void collectShaderOptions(IShaderPack sp, String path, Map<String, ShaderOption> mapOptions) {
         String[] astring = getLines(sp, path);
 
-        for (String s : astring) {
+        for (int i = 0; i < astring.length; i++) {
+            String s = astring[i];
             ShaderOption shaderoption = getShaderOption(s, path);
-
-            if (shaderoption != null && !shaderoption.getName().startsWith(ShaderMacros.getPrefixMacro()) && (!shaderoption.checkUsed() || isOptionUsed(shaderoption, astring))) {
+            if (shaderoption != null
+                && !shaderoption.getName().startsWith(ShaderMacros.getPrefixMacro())
+                && (!shaderoption.checkUsed() || isOptionUsed(shaderoption, astring))) {
                 String s1 = shaderoption.getName();
-                ShaderOption shaderoption1 = (ShaderOption) mapOptions.get(s1);
-
+                ShaderOption shaderoption1 = mapOptions.get(s1);
                 if (shaderoption1 != null) {
                     if (!Config.equals(shaderoption1.getValueDefault(), shaderoption.getValueDefault())) {
                         Config.warn("Ambiguous shader option: " + shaderoption.getName());
-                        Config.warn(" - in " + Config.arrayToString((Object[]) shaderoption1.getPaths()) + ": " + shaderoption1.getValueDefault());
-                        Config.warn(" - in " + Config.arrayToString((Object[]) shaderoption.getPaths()) + ": " + shaderoption.getValueDefault());
+                        Config.warn(" - in " + Config.arrayToString(shaderoption1.getPaths()) + ": " + shaderoption1.getValueDefault());
+                        Config.warn(" - in " + Config.arrayToString(shaderoption.getPaths()) + ": " + shaderoption.getValueDefault());
                         shaderoption1.setEnabled(false);
                     }
 
@@ -80,7 +105,8 @@ public class ShaderPackParser {
     }
 
     private static boolean isOptionUsed(ShaderOption so, String[] lines) {
-        for (String s : lines) {
+        for (int i = 0; i < lines.length; i++) {
+            String s = lines[i];
             if (so.isUsedInLine(s)) {
                 return true;
             }
@@ -91,16 +117,14 @@ public class ShaderPackParser {
 
     private static String[] getLines(IShaderPack sp, String path) {
         try {
-            List<String> list = new ArrayList();
+            List<String> list = new ArrayList<>();
             String s = loadFile(path, sp, 0, list, 0);
-
             if (s == null) {
                 return new String[0];
-            } else {
-                ByteArrayInputStream bytearrayinputstream = new ByteArrayInputStream(s.getBytes());
-                String[] astring = Config.readLines((InputStream) bytearrayinputstream);
-                return astring;
             }
+
+            ByteArrayInputStream bytearrayinputstream = new ByteArrayInputStream(s.getBytes());
+            return Config.readLines(bytearrayinputstream);
         } catch (IOException ioexception) {
             Config.dbg(ioexception.getClass().getName() + ": " + ioexception.getMessage());
             return new String[0];
@@ -109,7 +133,6 @@ public class ShaderPackParser {
 
     private static ShaderOption getShaderOption(String line, String path) {
         ShaderOption shaderoption = null;
-
         if (shaderoption == null) {
             shaderoption = ShaderOptionSwitch.parseOption(line, path);
         }
@@ -120,23 +143,25 @@ public class ShaderPackParser {
 
         if (shaderoption != null) {
             return shaderoption;
-        } else {
-            if (shaderoption == null) {
-                shaderoption = ShaderOptionSwitchConst.parseOption(line, path);
-            }
-
-            if (shaderoption == null) {
-                shaderoption = ShaderOptionVariableConst.parseOption(line, path);
-            }
-
-            return shaderoption != null && setConstNames.contains(shaderoption.getName()) ? shaderoption : null;
         }
+
+        if (shaderoption == null) {
+            shaderoption = ShaderOptionSwitchConst.parseOption(line, path);
+        }
+
+        if (shaderoption == null) {
+            shaderoption = ShaderOptionVariableConst.parseOption(line, path);
+        }
+
+        return shaderoption != null && setConstNames.contains(shaderoption.getName()) ? shaderoption : null;
     }
 
     private static Set<String> makeSetConstNames() {
-        Set<String> set = new HashSet();
+        Set<String> set = new HashSet<>();
         set.add("shadowMapResolution");
+        set.add("shadowMapFov");
         set.add("shadowDistance");
+        set.add("shadowDistanceRenderMul");
         set.add("shadowIntervalSize");
         set.add("generateShadowMipmap");
         set.add("generateShadowColorMipmap");
@@ -174,192 +199,203 @@ public class ShaderPackParser {
 
     public static ShaderProfile[] parseProfiles(Properties props, ShaderOption[] shaderOptions) {
         String s = "profile.";
-        List<ShaderProfile> list = new ArrayList();
+        List<ShaderProfile> list = new ArrayList<>();
 
-        for (Object s10 : props.keySet()) {
-            String s1 = (String) s10;
+        for (String s1 : (Iterable<String>) (Iterable) props.keySet()) {
             if (s1.startsWith(s)) {
                 String s2 = s1.substring(s.length());
-                props.getProperty(s1);
-                Set<String> set = new HashSet();
+                String s3 = props.getProperty(s1);
+                Set<String> set = new HashSet<>();
                 ShaderProfile shaderprofile = parseProfile(s2, props, set, shaderOptions);
-
                 if (shaderprofile != null) {
                     list.add(shaderprofile);
                 }
             }
         }
 
-        if (list.size() <= 0) {
-            return null;
-        } else {
-            ShaderProfile[] ashaderprofile = (ShaderProfile[]) (ShaderProfile[]) list.toArray(new ShaderProfile[list.size()]);
-            return ashaderprofile;
+        return list.size() <= 0 ? null : list.toArray(new ShaderProfile[list.size()]);
+    }
+
+    public static Set<String> parseOptionSliders(Properties props, ShaderOption[] shaderOptions) {
+        Set<String> set = new HashSet<>();
+        String s = props.getProperty("sliders");
+        if (s == null) {
+            return set;
         }
+
+        String[] astring = Config.tokenize(s, " ");
+
+        for (int i = 0; i < astring.length; i++) {
+            String s1 = astring[i];
+            ShaderOption shaderoption = ShaderUtils.getShaderOption(s1, shaderOptions);
+            if (shaderoption == null) {
+                Config.warn("Invalid shader option: " + s1);
+            } else {
+                set.add(s1);
+            }
+        }
+
+        return set;
     }
 
     private static ShaderProfile parseProfile(String name, Properties props, Set<String> parsedProfiles, ShaderOption[] shaderOptions) {
         String s = "profile.";
         String s1 = s + name;
-
         if (parsedProfiles.contains(s1)) {
             Config.warn("[Shaders] Profile already parsed: " + name);
             return null;
-        } else {
-            parsedProfiles.add(name);
-            ShaderProfile shaderprofile = new ShaderProfile(name);
-            String s2 = props.getProperty(s1);
-            String[] astring = Config.tokenize(s2, " ");
+        }
 
-            for (String s3 : astring) {
-                if (s3.startsWith(s)) {
-                    String s6 = s3.substring(s.length());
-                    ShaderProfile shaderprofile1 = parseProfile(s6, props, parsedProfiles, shaderOptions);
+        parsedProfiles.add(name);
+        ShaderProfile shaderprofile = new ShaderProfile(name);
+        String s2 = props.getProperty(s1);
+        String[] astring = Config.tokenize(s2, " ");
 
-                    if (shaderprofile != null) {
-                        shaderprofile.addOptionValues(shaderprofile1);
-                        shaderprofile.addDisabledPrograms(shaderprofile1.getDisabledPrograms());
+        for (int i = 0; i < astring.length; i++) {
+            String s3 = astring[i];
+            if (s3.startsWith(s)) {
+                String s4 = s3.substring(s.length());
+                ShaderProfile shaderprofile1 = parseProfile(s4, props, parsedProfiles, shaderOptions);
+                if (shaderprofile != null) {
+                    shaderprofile.addOptionValues(shaderprofile1);
+                    shaderprofile.addDisabledPrograms(shaderprofile1.getDisabledPrograms());
+                }
+            } else {
+                String[] astring1 = Config.tokenize(s3, ":=");
+                if (astring1.length == 1) {
+                    String s7 = astring1[0];
+                    boolean flag = true;
+                    if (s7.startsWith("!")) {
+                        flag = false;
+                        s7 = s7.substring(1);
                     }
-                } else {
-                    String[] astring1 = Config.tokenize(s3, ":=");
 
-                    if (astring1.length == 1) {
-                        String s7 = astring1[0];
-                        boolean flag = true;
-
-                        if (s7.startsWith("!")) {
-                            flag = false;
-                            s7 = s7.substring(1);
-                        }
-
-                        String s8 = "program.";
-
-                        if (!flag && s7.startsWith("program.")) {
-                            String s9 = s7.substring(s8.length());
-
-                            if (!Shaders.isProgramPath(s9)) {
-                                Config.warn("Invalid program: " + s9 + " in profile: " + shaderprofile.getName());
-                            } else {
-                                shaderprofile.addDisabledProgram(s9);
-                            }
+                    String s5 = "program.";
+                    if (s7.startsWith(s5)) {
+                        String s6 = s7.substring(s5.length());
+                        if (!Shaders.isProgramPath(s6)) {
+                            Config.warn("Invalid program: " + s6 + " in profile: " + shaderprofile.getName());
+                        } else if (flag) {
+                            shaderprofile.removeDisabledProgram(s6);
                         } else {
-                            ShaderOption shaderoption1 = ShaderUtils.getShaderOption(s7, shaderOptions);
-
-                            if (!(shaderoption1 instanceof ShaderOptionSwitch)) {
-                                Config.warn("[Shaders] Invalid option: " + s7);
-                            } else {
-                                shaderprofile.addOptionValue(s7, String.valueOf(flag));
-                                shaderoption1.setVisible(true);
-                            }
+                            shaderprofile.addDisabledProgram(s6);
                         }
-                    } else if (astring1.length != 2) {
-                        Config.warn("[Shaders] Invalid option value: " + s3);
                     } else {
-                        String s4 = astring1[0];
-                        String s5 = astring1[1];
-                        ShaderOption shaderoption = ShaderUtils.getShaderOption(s4, shaderOptions);
-
-                        if (shaderoption == null) {
-                            Config.warn("[Shaders] Invalid option: " + s3);
-                        } else if (!shaderoption.isValidValue(s5)) {
-                            Config.warn("[Shaders] Invalid value: " + s3);
+                        ShaderOption shaderoption1 = ShaderUtils.getShaderOption(s7, shaderOptions);
+                        if (!(shaderoption1 instanceof ShaderOptionSwitch)) {
+                            Config.warn("[Shaders] Invalid option: " + s7);
                         } else {
-                            shaderoption.setVisible(true);
-                            shaderprofile.addOptionValue(s4, s5);
+                            shaderprofile.addOptionValue(s7, String.valueOf(flag));
+                            shaderoption1.setVisible(true);
                         }
+                    }
+                } else if (astring1.length != 2) {
+                    Config.warn("[Shaders] Invalid option value: " + s3);
+                } else {
+                    String s8 = astring1[0];
+                    String s9 = astring1[1];
+                    ShaderOption shaderoption = ShaderUtils.getShaderOption(s8, shaderOptions);
+                    if (shaderoption == null) {
+                        Config.warn("[Shaders] Invalid option: " + s3);
+                    } else if (!shaderoption.isValidValue(s9)) {
+                        Config.warn("[Shaders] Invalid value: " + s3);
+                    } else {
+                        shaderoption.setVisible(true);
+                        shaderprofile.addOptionValue(s8, s9);
                     }
                 }
             }
-
-            return shaderprofile;
         }
+
+        return shaderprofile;
     }
 
-    public static Map<String, ShaderOption[]> parseGuiScreens(Properties props, ShaderProfile[] shaderProfiles, ShaderOption[] shaderOptions) {
-        Map<String, ShaderOption[]> map = new HashMap();
+    public static Map<String, ScreenShaderOptions> parseGuiScreens(Properties props, ShaderProfile[] shaderProfiles, ShaderOption[] shaderOptions) {
+        Map<String, ScreenShaderOptions> map = new HashMap<>();
         parseGuiScreen("screen", props, map, shaderProfiles, shaderOptions);
         return map.isEmpty() ? null : map;
     }
 
-    private static boolean parseGuiScreen(String key, Properties props, Map<String, ShaderOption[]> map, ShaderProfile[] shaderProfiles, ShaderOption[] shaderOptions) {
+    private static boolean parseGuiScreen(
+        String key, Properties props, Map<String, ScreenShaderOptions> map, ShaderProfile[] shaderProfiles, ShaderOption[] shaderOptions
+    ) {
         String s = props.getProperty(key);
-
         if (s == null) {
             return false;
-        } else {
-            List<ShaderOption> list = new ArrayList();
-            Set<String> set = new HashSet();
-            String[] astring = Config.tokenize(s, " ");
+        }
 
-            for (String s1 : astring) {
-                if (s1.equals("<empty>")) {
-                    list.add((ShaderOption) null);
-                } else if (set.contains(s1)) {
-                    Config.warn("[Shaders] Duplicate option: " + s1 + ", key: " + key);
-                } else {
-                    set.add(s1);
+        List<ShaderOption> list = new ArrayList<>();
+        Set<String> set = new HashSet<>();
+        String[] astring = Config.tokenize(s, " ");
 
-                    if (s1.equals("<profile>")) {
-                        if (shaderProfiles == null) {
-                            Config.warn("[Shaders] Option profile can not be used, no profiles defined: " + s1 + ", key: " + key);
-                        } else {
-                            ShaderOptionProfile shaderoptionprofile = new ShaderOptionProfile(shaderProfiles, shaderOptions);
-                            list.add(shaderoptionprofile);
-                        }
-                    } else if (s1.equals("*")) {
-                        ShaderOption shaderoption1 = new ShaderOptionRest("<rest>");
-                        list.add(shaderoption1);
-                    } else if (s1.startsWith("[") && s1.endsWith("]")) {
-                        String s2 = StrUtils.removePrefixSuffix(s1, "[", "]");
-
-                        if (!s2.matches("^[a-zA-Z0-9_]+$")) {
-                            Config.warn("[Shaders] Invalid screen: " + s1 + ", key: " + key);
-                        } else if (!parseGuiScreen("screen." + s2, props, map, shaderProfiles, shaderOptions)) {
-                            Config.warn("[Shaders] Invalid screen: " + s1 + ", key: " + key);
-                        } else {
-                            ShaderOptionScreen shaderoptionscreen = new ShaderOptionScreen(s2);
-                            list.add(shaderoptionscreen);
-                        }
+        for (int i = 0; i < astring.length; i++) {
+            String s1 = astring[i];
+            if (s1.equals("<empty>")) {
+                list.add(null);
+            } else if (set.contains(s1)) {
+                Config.warn("[Shaders] Duplicate option: " + s1 + ", key: " + key);
+            } else {
+                set.add(s1);
+                if (s1.equals("<profile>")) {
+                    if (shaderProfiles == null) {
+                        Config.warn("[Shaders] Option profile can not be used, no profiles defined: " + s1 + ", key: " + key);
                     } else {
-                        ShaderOption shaderoption = ShaderUtils.getShaderOption(s1, shaderOptions);
-
-                        if (shaderoption == null) {
-                            Config.warn("[Shaders] Invalid option: " + s1 + ", key: " + key);
-                            list.add((ShaderOption) null);
-                        } else {
-                            shaderoption.setVisible(true);
-                            list.add(shaderoption);
-                        }
+                        ShaderOptionProfile shaderoptionprofile = new ShaderOptionProfile(shaderProfiles, shaderOptions);
+                        list.add(shaderoptionprofile);
+                    }
+                } else if (s1.equals("*")) {
+                    ShaderOption shaderoption = new ShaderOptionRest("<rest>");
+                    list.add(shaderoption);
+                } else if (s1.startsWith("[") && s1.endsWith("]")) {
+                    String s3 = StrUtils.removePrefixSuffix(s1, "[", "]");
+                    if (!s3.matches("^[a-zA-Z0-9_]+$")) {
+                        Config.warn("[Shaders] Invalid screen: " + s1 + ", key: " + key);
+                    } else if (!parseGuiScreen("screen." + s3, props, map, shaderProfiles, shaderOptions)) {
+                        Config.warn("[Shaders] Invalid screen: " + s1 + ", key: " + key);
+                    } else {
+                        ShaderOptionScreen shaderoptionscreen = new ShaderOptionScreen(s3);
+                        list.add(shaderoptionscreen);
+                    }
+                } else {
+                    ShaderOption shaderoption1 = ShaderUtils.getShaderOption(s1, shaderOptions);
+                    if (shaderoption1 == null) {
+                        Config.warn("[Shaders] Invalid option: " + s1 + ", key: " + key);
+                        list.add(null);
+                    } else {
+                        shaderoption1.setVisible(true);
+                        list.add(shaderoption1);
                     }
                 }
             }
-
-            ShaderOption[] ashaderoption = (ShaderOption[]) (ShaderOption[]) list.toArray(new ShaderOption[list.size()]);
-            map.put(key, ashaderoption);
-            return true;
         }
+
+        ShaderOption[] ashaderoption = list.toArray(new ShaderOption[list.size()]);
+        String s2 = props.getProperty(key + ".columns");
+        int j = Config.parseInt(s2, 2);
+        ScreenShaderOptions screenshaderoptions = new ScreenShaderOptions(key, ashaderoption, j);
+        map.put(key, screenshaderoptions);
+        return true;
     }
 
-    public static BufferedReader resolveIncludes(BufferedReader reader, String filePath, IShaderPack shaderPack, int fileIndex, List<String> listFiles, int includeLevel) throws IOException {
+    public static BufferedReader resolveIncludes(
+        BufferedReader reader, String filePath, IShaderPack shaderPack, int fileIndex, List<String> listFiles, int includeLevel
+    ) throws IOException {
         String s = "/";
         int i = filePath.lastIndexOf("/");
-
         if (i >= 0) {
             s = filePath.substring(0, i);
         }
 
         CharArrayWriter chararraywriter = new CharArrayWriter();
         int j = -1;
-        Set<String> set = new LinkedHashSet();
+        Set<String> set = new LinkedHashSet<>();
         int k = 1;
 
         while (true) {
             String s1 = reader.readLine();
-
             if (s1 == null) {
                 char[] achar = chararraywriter.toCharArray();
-
-                if (j >= 0 && !set.isEmpty()) {
+                if (j >= 0 && set.size() > 0) {
                     StringBuilder stringbuilder = new StringBuilder();
 
                     for (String s7 : set) {
@@ -381,9 +417,8 @@ public class ShaderPackParser {
 
             if (j < 0) {
                 Matcher matcher = PATTERN_VERSION.matcher(s1);
-
                 if (matcher.matches()) {
-                    String s2 = "#define MC_VERSION " + Config.getMinecraftVersionInt() + "\n" + "#define " + "MC_GL_VERSION" + " " + Config.getGlVersion().toInt() + "\n" + "#define " + "MC_GLSL_VERSION" + " " + Config.getGlslVersion().toInt() + "\n" + "#define " + ShaderMacros.getOs() + "\n" + "#define " + ShaderMacros.getVendor() + "\n" + "#define " + ShaderMacros.getRenderer() + "\n";
+                    String s2 = ShaderMacros.getMacroLines();
                     String s3 = s1 + "\n" + s2;
                     String s4 = "#line " + (k + 1) + " " + fileIndex;
                     s1 = s3 + s4;
@@ -392,19 +427,16 @@ public class ShaderPackParser {
             }
 
             Matcher matcher1 = PATTERN_INCLUDE.matcher(s1);
-
             if (matcher1.matches()) {
                 String s5 = matcher1.group(1);
                 boolean flag = s5.startsWith("/");
                 String s8 = flag ? "/shaders" + s5 : s + "/" + s5;
-
                 if (!listFiles.contains(s8)) {
                     listFiles.add(s8);
                 }
 
                 int l = listFiles.indexOf(s8) + 1;
                 s1 = loadFile(s8, shaderPack, l, listFiles, includeLevel);
-
                 if (s1 == null) {
                     throw new IOException("Included file not found: " + filePath);
                 }
@@ -419,56 +451,119 @@ public class ShaderPackParser {
             if (j >= 0 && s1.contains(ShaderMacros.getPrefixMacro())) {
                 String[] astring = findExtensions(s1, ShaderMacros.getExtensions());
 
-                for (String s9 : astring) {
+                for (int i1 = 0; i1 < astring.length; i1++) {
+                    String s9 = astring[i1];
                     set.add(s9);
                 }
             }
 
             chararraywriter.write(s1);
             chararraywriter.write("\n");
-            ++k;
+            k++;
         }
     }
 
     private static String[] findExtensions(String line, String[] extensions) {
-        List<String> list = new ArrayList();
+        List<String> list = new ArrayList<>();
 
-        for (String s : extensions) {
+        for (int i = 0; i < extensions.length; i++) {
+            String s = extensions[i];
             if (line.contains(s)) {
                 list.add(s);
             }
         }
 
-        String[] astring = (String[]) (String[]) list.toArray(new String[list.size()]);
-        return astring;
+        return list.toArray(new String[list.size()]);
     }
 
     private static String loadFile(String filePath, IShaderPack shaderPack, int fileIndex, List<String> listFiles, int includeLevel) throws IOException {
         if (includeLevel >= 10) {
             throw new IOException("#include depth exceeded: " + includeLevel + ", file: " + filePath);
-        } else {
-            ++includeLevel;
-            InputStream inputstream = shaderPack.getResourceAsStream(filePath);
+        }
 
-            if (inputstream == null) {
-                return null;
-            } else {
-                InputStreamReader inputstreamreader = new InputStreamReader(inputstream, StandardCharsets.US_ASCII);
-                BufferedReader bufferedreader = new BufferedReader(inputstreamreader);
-                bufferedreader = resolveIncludes(bufferedreader, filePath, shaderPack, fileIndex, listFiles, includeLevel);
-                CharArrayWriter chararraywriter = new CharArrayWriter();
+        includeLevel++;
+        InputStream inputstream = shaderPack.getResourceAsStream(filePath);
+        if (inputstream == null) {
+            return null;
+        }
 
-                while (true) {
-                    String s = bufferedreader.readLine();
+        InputStreamReader inputstreamreader = new InputStreamReader(inputstream, "ASCII");
+        BufferedReader bufferedreader = new BufferedReader(inputstreamreader);
+        bufferedreader = resolveIncludes(bufferedreader, filePath, shaderPack, fileIndex, listFiles, includeLevel);
+        CharArrayWriter chararraywriter = new CharArrayWriter();
 
-                    if (s == null) {
-                        return chararraywriter.toString();
+        while (true) {
+            String s = bufferedreader.readLine();
+            if (s == null) {
+                return chararraywriter.toString();
+            }
+
+            chararraywriter.write(s);
+            chararraywriter.write("\n");
+        }
+    }
+
+    public static CustomUniforms parseCustomUniforms(Properties props) {
+        String s = "uniform";
+        String s1 = "variable";
+        String s2 = s + ".";
+        String s3 = s1 + ".";
+        Map<String, IExpression> map = new HashMap<>();
+        List<CustomUniform> list = new ArrayList<>();
+
+        for (String s4 : (Iterable<String>) (Iterable) props.keySet()) {
+            String[] astring = Config.tokenize(s4, ".");
+            if (astring.length == 3) {
+                String s5 = astring[0];
+                String s6 = astring[1];
+                String s7 = astring[2];
+                String s8 = props.getProperty(s4).trim();
+                if (map.containsKey(s7)) {
+                    SMCLog.warning("Expression already defined: " + s7);
+                } else if (s5.equals(s) || s5.equals(s1)) {
+                    SMCLog.info("Custom " + s5 + ": " + s7);
+                    CustomUniform customuniform = parseCustomUniform(s5, s7, s6, s8, map);
+                    if (customuniform != null) {
+                        map.put(s7, customuniform.getExpression());
+                        if (!s5.equals(s1)) {
+                            list.add(customuniform);
+                        }
                     }
-
-                    chararraywriter.write(s);
-                    chararraywriter.write("\n");
                 }
             }
+        }
+
+        if (list.size() <= 0) {
+            return null;
+        }
+
+        CustomUniform[] acustomuniform = list.toArray(new CustomUniform[list.size()]);
+        return new CustomUniforms(acustomuniform);
+    }
+
+    private static CustomUniform parseCustomUniform(String kind, String name, String type, String src, Map<String, IExpression> mapExpressions) {
+        try {
+            UniformType uniformtype = UniformType.parse(type);
+            if (uniformtype == null) {
+                SMCLog.warning("Unknown " + kind + " type: " + uniformtype);
+                return null;
+            } else {
+                ShaderExpressionResolver shaderexpressionresolver = new ShaderExpressionResolver(mapExpressions);
+                ExpressionParser expressionparser = new ExpressionParser(shaderexpressionresolver);
+                IExpression iexpression = expressionparser.parse(src);
+                ExpressionType expressiontype = iexpression.getExpressionType();
+                if (!uniformtype.matchesExpressionType(expressiontype)) {
+                    SMCLog.warning(
+                        "Expression type does not match " + kind + " type, expression: " + expressiontype + ", " + kind + ": " + uniformtype + " " + name
+                    );
+                    return null;
+                } else {
+                    return new CustomUniform(name, uniformtype, iexpression);
+                }
+            }
+        } catch (ParseException parseexception) {
+            SMCLog.warning(parseexception.getClass().getName() + ": " + parseexception.getMessage());
+            return null;
         }
     }
 }

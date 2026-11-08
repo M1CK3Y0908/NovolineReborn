@@ -190,6 +190,8 @@ public class WorldRenderer {
         return new State(aint, new VertexFormat(this.vertexFormat), atextureatlassprite);
     }
 
+    public int getBufferSize() { return this.func_181664_j(); }
+
     public int func_181664_j() {
         return this.vertexCount * this.vertexFormat.func_181719_f();
     }

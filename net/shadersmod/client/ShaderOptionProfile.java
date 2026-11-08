@@ -1,9 +1,8 @@
 package net.shadersmod.client;
 
-import net.optifine.Lang;
-
 import java.util.ArrayList;
 import java.util.List;
+import net.optifine.Lang;
 
 public class ShaderOptionProfile extends ShaderOption {
     private ShaderProfile[] profiles = null;
@@ -12,14 +11,14 @@ public class ShaderOptionProfile extends ShaderOption {
     private static final String VALUE_CUSTOM = "<custom>";
 
     public ShaderOptionProfile(ShaderProfile[] profiles, ShaderOption[] options) {
-        super("<profile>", "", detectProfileName(profiles, options), getProfileNames(profiles), detectProfileName(profiles, options, true), (String) null);
+        super("<profile>", "", detectProfileName(profiles, options), getProfileNames(profiles), detectProfileName(profiles, options, true), null);
         this.profiles = profiles;
         this.options = options;
     }
 
+    @Override
     public void nextValue() {
         super.nextValue();
-
         if (this.getValue().equals("<custom>")) {
             super.nextValue();
         }
@@ -29,8 +28,7 @@ public class ShaderOptionProfile extends ShaderOption {
 
     public void updateProfile() {
         ShaderProfile shaderprofile = this.getProfile(this.getValue());
-
-        if (!ShaderUtils.matchProfile(shaderprofile, this.options, false)) {
+        if (shaderprofile == null || !ShaderUtils.matchProfile(shaderprofile, this.options, false)) {
             String s = detectProfileName(this.profiles, this.options);
             this.setValue(s);
         }
@@ -38,13 +36,12 @@ public class ShaderOptionProfile extends ShaderOption {
 
     private void applyProfileOptions() {
         ShaderProfile shaderprofile = this.getProfile(this.getValue());
-
         if (shaderprofile != null) {
             String[] astring = shaderprofile.getOptions();
 
-            for (String s : astring) {
+            for (int i = 0; i < astring.length; i++) {
+                String s = astring[i];
                 ShaderOption shaderoption = this.getOption(s);
-
                 if (shaderoption != null) {
                     String s1 = shaderprofile.getValue(s);
                     shaderoption.setValue(s1);
@@ -54,7 +51,8 @@ public class ShaderOptionProfile extends ShaderOption {
     }
 
     private ShaderOption getOption(String name) {
-        for (ShaderOption shaderoption : this.options) {
+        for (int i = 0; i < this.options.length; i++) {
+            ShaderOption shaderoption = this.options[i];
             if (shaderoption.getName().equals(name)) {
                 return shaderoption;
             }
@@ -64,7 +62,8 @@ public class ShaderOptionProfile extends ShaderOption {
     }
 
     private ShaderProfile getProfile(String name) {
-        for (ShaderProfile shaderprofile : this.profiles) {
+        for (int i = 0; i < this.profiles.length; i++) {
+            ShaderProfile shaderprofile = this.profiles[i];
             if (shaderprofile.getName().equals(name)) {
                 return shaderprofile;
             }
@@ -73,14 +72,17 @@ public class ShaderOptionProfile extends ShaderOption {
         return null;
     }
 
+    @Override
     public String getNameText() {
         return Lang.get("of.shaders.profile");
     }
 
+    @Override
     public String getValueText(String val) {
         return val.equals("<custom>") ? Lang.get("of.general.custom", "<custom>") : Shaders.translate("profile." + val, val);
     }
 
+    @Override
     public String getValueColor(String val) {
         return val.equals("<custom>") ? "\u00a7c" : "\u00a7a";
     }
@@ -95,14 +97,14 @@ public class ShaderOptionProfile extends ShaderOption {
     }
 
     private static String[] getProfileNames(ShaderProfile[] profs) {
-        List<String> list = new ArrayList();
+        List<String> list = new ArrayList<>();
 
-        for (ShaderProfile shaderprofile : profs) {
+        for (int i = 0; i < profs.length; i++) {
+            ShaderProfile shaderprofile = profs[i];
             list.add(shaderprofile.getName());
         }
 
         list.add("<custom>");
-        String[] astring = (String[]) (String[]) list.toArray(new String[list.size()]);
-        return astring;
+        return list.toArray(new String[list.size()]);
     }
 }

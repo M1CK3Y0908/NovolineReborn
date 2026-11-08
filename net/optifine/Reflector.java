@@ -12,8 +12,14 @@ import net.minecraft.block.Block;
 import net.minecraft.block.properties.IProperty;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiEnchantment;
+import net.minecraft.client.gui.GuiHopper;
 import net.minecraft.client.gui.GuiMainMenu;
 import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.gui.inventory.GuiBeacon;
+import net.minecraft.client.gui.inventory.GuiBrewingStand;
+import net.minecraft.client.gui.inventory.GuiChest;
+import net.minecraft.client.gui.inventory.GuiFurnace;
 import net.minecraft.client.model.ModelBanner;
 import net.minecraft.client.model.ModelBase;
 import net.minecraft.client.model.ModelBat;
@@ -66,7 +72,10 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.EnumCreatureType;
 import net.minecraft.entity.item.EntityItemFrame;
+import net.minecraft.entity.passive.EntityVillager;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.inventory.IInventory;
+import net.minecraft.inventory.InventoryBasic;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemRecord;
 import net.minecraft.potion.PotionEffect;
@@ -74,13 +83,13 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumWorldBlockLayer;
 import net.minecraft.util.LongHashMap;
 import net.minecraft.world.ChunkCoordIntPair;
+import net.minecraft.world.IWorldNameable;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldProvider;
 import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraftforge.common.property.IUnlistedProperty;
 
-public class Reflector
-{
+public class Reflector {
     private static boolean logForge = logEntry("*** Reflector Forge ***");
     public static ReflectorClass Attributes = new ReflectorClass("net.minecraftforge.client.model.Attributes");
     public static ReflectorField Attributes_DEFAULT_BAKED_FORMAT = new ReflectorField(Attributes, "DEFAULT_BAKED_FORMAT");
@@ -88,23 +97,33 @@ public class Reflector
     public static ReflectorClass BlamingTransformer = new ReflectorClass("net.minecraftforge.fml.common.asm.transformers.BlamingTransformer");
     public static ReflectorMethod BlamingTransformer_onCrash = new ReflectorMethod(BlamingTransformer, "onCrash");
     public static ReflectorClass ChunkWatchEvent_UnWatch = new ReflectorClass("net.minecraftforge.event.world.ChunkWatchEvent$UnWatch");
-    public static ReflectorConstructor ChunkWatchEvent_UnWatch_Constructor = new ReflectorConstructor(ChunkWatchEvent_UnWatch, new Class[] {ChunkCoordIntPair.class, EntityPlayerMP.class});
+    public static ReflectorConstructor ChunkWatchEvent_UnWatch_Constructor = new ReflectorConstructor(
+        ChunkWatchEvent_UnWatch, new Class[]{ChunkCoordIntPair.class, EntityPlayerMP.class}
+    );
     public static ReflectorClass CoreModManager = new ReflectorClass("net.minecraftforge.fml.relauncher.CoreModManager");
     public static ReflectorMethod CoreModManager_onCrash = new ReflectorMethod(CoreModManager, "onCrash");
     public static ReflectorClass DimensionManager = new ReflectorClass("net.minecraftforge.common.DimensionManager");
     public static ReflectorMethod DimensionManager_createProviderFor = new ReflectorMethod(DimensionManager, "createProviderFor");
     public static ReflectorMethod DimensionManager_getStaticDimensionIDs = new ReflectorMethod(DimensionManager, "getStaticDimensionIDs");
     public static ReflectorClass DrawScreenEvent_Pre = new ReflectorClass("net.minecraftforge.client.event.GuiScreenEvent$DrawScreenEvent$Pre");
-    public static ReflectorConstructor DrawScreenEvent_Pre_Constructor = new ReflectorConstructor(DrawScreenEvent_Pre, new Class[] {GuiScreen.class, Integer.TYPE, Integer.TYPE, Float.TYPE});
+    public static ReflectorConstructor DrawScreenEvent_Pre_Constructor = new ReflectorConstructor(
+        DrawScreenEvent_Pre, new Class[]{GuiScreen.class, int.class, int.class, float.class}
+    );
     public static ReflectorClass DrawScreenEvent_Post = new ReflectorClass("net.minecraftforge.client.event.GuiScreenEvent$DrawScreenEvent$Post");
-    public static ReflectorConstructor DrawScreenEvent_Post_Constructor = new ReflectorConstructor(DrawScreenEvent_Post, new Class[] {GuiScreen.class, Integer.TYPE, Integer.TYPE, Float.TYPE});
+    public static ReflectorConstructor DrawScreenEvent_Post_Constructor = new ReflectorConstructor(
+        DrawScreenEvent_Post, new Class[]{GuiScreen.class, int.class, int.class, float.class}
+    );
     public static ReflectorClass EntityViewRenderEvent_CameraSetup = new ReflectorClass("net.minecraftforge.client.event.EntityViewRenderEvent$CameraSetup");
-    public static ReflectorConstructor EntityViewRenderEvent_CameraSetup_Constructor = new ReflectorConstructor(EntityViewRenderEvent_CameraSetup, new Class[] {EntityRenderer.class, Entity.class, Block.class, Double.TYPE, Float.TYPE, Float.TYPE, Float.TYPE});
+    public static ReflectorConstructor EntityViewRenderEvent_CameraSetup_Constructor = new ReflectorConstructor(
+        EntityViewRenderEvent_CameraSetup, new Class[]{EntityRenderer.class, Entity.class, Block.class, double.class, float.class, float.class, float.class}
+    );
     public static ReflectorField EntityViewRenderEvent_CameraSetup_yaw = new ReflectorField(EntityViewRenderEvent_CameraSetup, "yaw");
     public static ReflectorField EntityViewRenderEvent_CameraSetup_pitch = new ReflectorField(EntityViewRenderEvent_CameraSetup, "pitch");
     public static ReflectorField EntityViewRenderEvent_CameraSetup_roll = new ReflectorField(EntityViewRenderEvent_CameraSetup, "roll");
     public static ReflectorClass EntityViewRenderEvent_FogColors = new ReflectorClass("net.minecraftforge.client.event.EntityViewRenderEvent$FogColors");
-    public static ReflectorConstructor EntityViewRenderEvent_FogColors_Constructor = new ReflectorConstructor(EntityViewRenderEvent_FogColors, new Class[] {EntityRenderer.class, Entity.class, Block.class, Double.TYPE, Float.TYPE, Float.TYPE, Float.TYPE});
+    public static ReflectorConstructor EntityViewRenderEvent_FogColors_Constructor = new ReflectorConstructor(
+        EntityViewRenderEvent_FogColors, new Class[]{EntityRenderer.class, Entity.class, Block.class, double.class, float.class, float.class, float.class}
+    );
     public static ReflectorField EntityViewRenderEvent_FogColors_red = new ReflectorField(EntityViewRenderEvent_FogColors, "red");
     public static ReflectorField EntityViewRenderEvent_FogColors_green = new ReflectorField(EntityViewRenderEvent_FogColors, "green");
     public static ReflectorField EntityViewRenderEvent_FogColors_blue = new ReflectorField(EntityViewRenderEvent_FogColors, "blue");
@@ -117,7 +136,9 @@ public class Reflector
     public static ReflectorField Event_Result_ALLOW = new ReflectorField(Event_Result, "ALLOW");
     public static ReflectorField Event_Result_DEFAULT = new ReflectorField(Event_Result, "DEFAULT");
     public static ReflectorClass ExtendedBlockState = new ReflectorClass("net.minecraftforge.common.property.ExtendedBlockState");
-    public static ReflectorConstructor ExtendedBlockState_Constructor = new ReflectorConstructor(ExtendedBlockState, new Class[] {Block.class, IProperty[].class, IUnlistedProperty[].class});
+    public static ReflectorConstructor ExtendedBlockState_Constructor = new ReflectorConstructor(
+        ExtendedBlockState, new Class[]{Block.class, IProperty[].class, IUnlistedProperty[].class}
+    );
     public static ReflectorClass FMLClientHandler = new ReflectorClass("net.minecraftforge.fml.client.FMLClientHandler");
     public static ReflectorMethod FMLClientHandler_instance = new ReflectorMethod(FMLClientHandler, "instance");
     public static ReflectorMethod FMLClientHandler_isLoading = new ReflectorMethod(FMLClientHandler, "isLoading");
@@ -136,13 +157,13 @@ public class Reflector
     public static ReflectorMethod ForgeBlock_addDestroyEffects = new ReflectorMethod(ForgeBlock, "addDestroyEffects");
     public static ReflectorMethod ForgeBlock_addHitEffects = new ReflectorMethod(ForgeBlock, "addHitEffects");
     public static ReflectorMethod ForgeBlock_canCreatureSpawn = new ReflectorMethod(ForgeBlock, "canCreatureSpawn");
-    public static ReflectorMethod ForgeBlock_canRenderInLayer = new ReflectorMethod(ForgeBlock, "canRenderInLayer", new Class[] {EnumWorldBlockLayer.class});
+    public static ReflectorMethod ForgeBlock_canRenderInLayer = new ReflectorMethod(ForgeBlock, "canRenderInLayer", new Class[]{EnumWorldBlockLayer.class});
     public static ReflectorMethod ForgeBlock_doesSideBlockRendering = new ReflectorMethod(ForgeBlock, "doesSideBlockRendering");
     public static ReflectorMethod ForgeBlock_getBedDirection = new ReflectorMethod(ForgeBlock, "getBedDirection");
     public static ReflectorMethod ForgeBlock_getExtendedState = new ReflectorMethod(ForgeBlock, "getExtendedState");
     public static ReflectorMethod ForgeBlock_getLightOpacity = new ReflectorMethod(ForgeBlock, "getLightOpacity");
     public static ReflectorMethod ForgeBlock_getLightValue = new ReflectorMethod(ForgeBlock, "getLightValue");
-    public static ReflectorMethod ForgeBlock_hasTileEntity = new ReflectorMethod(ForgeBlock, "hasTileEntity", new Class[] {IBlockState.class});
+    public static ReflectorMethod ForgeBlock_hasTileEntity = new ReflectorMethod(ForgeBlock, "hasTileEntity", new Class[]{IBlockState.class});
     public static ReflectorMethod ForgeBlock_isAir = new ReflectorMethod(ForgeBlock, "isAir");
     public static ReflectorMethod ForgeBlock_isBed = new ReflectorMethod(ForgeBlock, "isBed");
     public static ReflectorMethod ForgeBlock_isBedFoot = new ReflectorMethod(ForgeBlock, "isBedFoot");
@@ -169,7 +190,9 @@ public class Reflector
     public static ReflectorMethod ForgeHooks_onLivingSetAttackTarget = new ReflectorMethod(ForgeHooks, "onLivingSetAttackTarget");
     public static ReflectorMethod ForgeHooks_onLivingUpdate = new ReflectorMethod(ForgeHooks, "onLivingUpdate");
     public static ReflectorClass ForgeHooksClient = new ReflectorClass("net.minecraftforge.client.ForgeHooksClient");
-    public static ReflectorMethod ForgeHooksClient_applyTransform = new ReflectorMethod(ForgeHooksClient, "applyTransform", new Class[] {Matrix4f.class, Optional.class});
+    public static ReflectorMethod ForgeHooksClient_applyTransform = new ReflectorMethod(
+        ForgeHooksClient, "applyTransform", new Class[]{Matrix4f.class, Optional.class}
+    );
     public static ReflectorMethod ForgeHooksClient_dispatchRenderLast = new ReflectorMethod(ForgeHooksClient, "dispatchRenderLast");
     public static ReflectorMethod ForgeHooksClient_drawScreen = new ReflectorMethod(ForgeHooksClient, "drawScreen");
     public static ReflectorMethod ForgeHooksClient_fillNormal = new ReflectorMethod(ForgeHooksClient, "fillNormal");
@@ -178,7 +201,7 @@ public class Reflector
     public static ReflectorMethod ForgeHooksClient_getArmorTexture = new ReflectorMethod(ForgeHooksClient, "getArmorTexture");
     public static ReflectorMethod ForgeHooksClient_getFogDensity = new ReflectorMethod(ForgeHooksClient, "getFogDensity");
     public static ReflectorMethod ForgeHooksClient_getFOVModifier = new ReflectorMethod(ForgeHooksClient, "getFOVModifier");
-    public static ReflectorMethod ForgeHooksClient_getMatrix = new ReflectorMethod(ForgeHooksClient, "getMatrix", new Class[] {ModelRotation.class});
+    public static ReflectorMethod ForgeHooksClient_getMatrix = new ReflectorMethod(ForgeHooksClient, "getMatrix", new Class[]{ModelRotation.class});
     public static ReflectorMethod ForgeHooksClient_getOffsetFOV = new ReflectorMethod(ForgeHooksClient, "getOffsetFOV");
     public static ReflectorMethod ForgeHooksClient_loadEntityShader = new ReflectorMethod(ForgeHooksClient, "loadEntityShader");
     public static ReflectorMethod ForgeHooksClient_onDrawBlockHighlight = new ReflectorMethod(ForgeHooksClient, "onDrawBlockHighlight");
@@ -199,7 +222,7 @@ public class Reflector
     public static ReflectorMethod ForgeItem_shouldCauseReequipAnimation = new ReflectorMethod(ForgeItem, "shouldCauseReequipAnimation");
     public static ReflectorMethod ForgeItem_showDurabilityBar = new ReflectorMethod(ForgeItem, "showDurabilityBar");
     public static ReflectorClass ForgeItemRecord = new ReflectorClass(ItemRecord.class);
-    public static ReflectorMethod ForgeItemRecord_getRecordResource = new ReflectorMethod(ForgeItemRecord, "getRecordResource", new Class[] {String.class});
+    public static ReflectorMethod ForgeItemRecord_getRecordResource = new ReflectorMethod(ForgeItemRecord, "getRecordResource", new Class[]{String.class});
     public static ReflectorClass ForgeModContainer = new ReflectorClass("net.minecraftforge.common.ForgeModContainer");
     public static ReflectorField ForgeModContainer_forgeLightPipelineEnabled = new ReflectorField(ForgeModContainer, "forgeLightPipelineEnabled");
     public static ReflectorClass ForgePotionEffect = new ReflectorClass(PotionEffect.class);
@@ -216,14 +239,16 @@ public class Reflector
     public static ReflectorMethod ForgeVertexFormatElementEnumUseage_preDraw = new ReflectorMethod(ForgeVertexFormatElementEnumUseage, "preDraw");
     public static ReflectorMethod ForgeVertexFormatElementEnumUseage_postDraw = new ReflectorMethod(ForgeVertexFormatElementEnumUseage, "postDraw");
     public static ReflectorClass ForgeWorld = new ReflectorClass(World.class);
-    public static ReflectorMethod ForgeWorld_countEntities = new ReflectorMethod(ForgeWorld, "countEntities", new Class[] {EnumCreatureType.class, Boolean.TYPE});
+    public static ReflectorMethod ForgeWorld_countEntities = new ReflectorMethod(
+        ForgeWorld, "countEntities", new Class[]{EnumCreatureType.class, boolean.class}
+    );
     public static ReflectorMethod ForgeWorld_getPerWorldStorage = new ReflectorMethod(ForgeWorld, "getPerWorldStorage");
     public static ReflectorClass ForgeWorldProvider = new ReflectorClass(WorldProvider.class);
     public static ReflectorMethod ForgeWorldProvider_getCloudRenderer = new ReflectorMethod(ForgeWorldProvider, "getCloudRenderer");
     public static ReflectorMethod ForgeWorldProvider_getSkyRenderer = new ReflectorMethod(ForgeWorldProvider, "getSkyRenderer");
     public static ReflectorMethod ForgeWorldProvider_getWeatherRenderer = new ReflectorMethod(ForgeWorldProvider, "getWeatherRenderer");
     public static ReflectorClass GuiModList = new ReflectorClass("net.minecraftforge.fml.client.GuiModList");
-    public static ReflectorConstructor GuiModList_Constructor = new ReflectorConstructor(GuiModList, new Class[] {GuiScreen.class});
+    public static ReflectorConstructor GuiModList_Constructor = new ReflectorConstructor(GuiModList, new Class[]{GuiScreen.class});
     public static ReflectorClass IColoredBakedQuad = new ReflectorClass("net.minecraftforge.client.model.IColoredBakedQuad");
     public static ReflectorClass IExtendedBlockState = new ReflectorClass("net.minecraftforge.common.property.IExtendedBlockState");
     public static ReflectorMethod IExtendedBlockState_getClean = new ReflectorMethod(IExtendedBlockState, "getClean");
@@ -232,7 +257,7 @@ public class Reflector
     public static ReflectorClass ISmartBlockModel = new ReflectorClass("net.minecraftforge.client.model.ISmartBlockModel");
     public static ReflectorMethod ISmartBlockModel_handleBlockState = new ReflectorMethod(ISmartBlockModel, "handleBlockState");
     public static ReflectorClass ItemModelMesherForge = new ReflectorClass("net.minecraftforge.client.ItemModelMesherForge");
-    public static ReflectorConstructor ItemModelMesherForge_Constructor = new ReflectorConstructor(ItemModelMesherForge, new Class[] {ModelManager.class});
+    public static ReflectorConstructor ItemModelMesherForge_Constructor = new ReflectorConstructor(ItemModelMesherForge, new Class[]{ModelManager.class});
     public static ReflectorClass Launch = new ReflectorClass("net.minecraft.launchwrapper.Launch");
     public static ReflectorField Launch_blackboard = new ReflectorField(Launch, "blackboard");
     public static ReflectorClass LightUtil = new ReflectorClass("net.minecraftforge.client.model.pipeline.LightUtil");
@@ -240,33 +265,81 @@ public class Reflector
     public static ReflectorMethod LightUtil_putBakedQuad = new ReflectorMethod(LightUtil, "putBakedQuad");
     public static ReflectorMethod LightUtil_renderQuadColor = new ReflectorMethod(LightUtil, "renderQuadColor");
     public static ReflectorField LightUtil_tessellator = new ReflectorField(LightUtil, "tessellator");
+    public static ReflectorClass Loader = new ReflectorClass("net.minecraftforge.fml.common.Loader");
+    public static ReflectorMethod Loader_getActiveModList = new ReflectorMethod(Loader, "getActiveModList");
+    public static ReflectorMethod Loader_instance = new ReflectorMethod(Loader, "instance");
     public static ReflectorClass MinecraftForge = new ReflectorClass("net.minecraftforge.common.MinecraftForge");
     public static ReflectorField MinecraftForge_EVENT_BUS = new ReflectorField(MinecraftForge, "EVENT_BUS");
     public static ReflectorClass MinecraftForgeClient = new ReflectorClass("net.minecraftforge.client.MinecraftForgeClient");
     public static ReflectorMethod MinecraftForgeClient_getRenderPass = new ReflectorMethod(MinecraftForgeClient, "getRenderPass");
     public static ReflectorMethod MinecraftForgeClient_onRebuildChunk = new ReflectorMethod(MinecraftForgeClient, "onRebuildChunk");
+    public static ReflectorClass ModContainer = new ReflectorClass("net.minecraftforge.fml.common.ModContainer");
+    public static ReflectorMethod ModContainer_getModId = new ReflectorMethod(ModContainer, "getModId");
     public static ReflectorClass ModelLoader = new ReflectorClass("net.minecraftforge.client.model.ModelLoader");
     public static ReflectorMethod ModelLoader_onRegisterItems = new ReflectorMethod(ModelLoader, "onRegisterItems");
     public static ReflectorClass RenderBlockOverlayEvent_OverlayType = new ReflectorClass("net.minecraftforge.client.event.RenderBlockOverlayEvent$OverlayType");
     public static ReflectorField RenderBlockOverlayEvent_OverlayType_BLOCK = new ReflectorField(RenderBlockOverlayEvent_OverlayType, "BLOCK");
     public static ReflectorClass RenderingRegistry = new ReflectorClass("net.minecraftforge.fml.client.registry.RenderingRegistry");
-    public static ReflectorMethod RenderingRegistry_loadEntityRenderers = new ReflectorMethod(RenderingRegistry, "loadEntityRenderers", new Class[] {RenderManager.class, Map.class});
+    public static ReflectorMethod RenderingRegistry_loadEntityRenderers = new ReflectorMethod(
+        RenderingRegistry, "loadEntityRenderers", new Class[]{RenderManager.class, Map.class}
+    );
     public static ReflectorClass RenderItemInFrameEvent = new ReflectorClass("net.minecraftforge.client.event.RenderItemInFrameEvent");
-    public static ReflectorConstructor RenderItemInFrameEvent_Constructor = new ReflectorConstructor(RenderItemInFrameEvent, new Class[] {EntityItemFrame.class, RenderItemFrame.class});
+    public static ReflectorConstructor RenderItemInFrameEvent_Constructor = new ReflectorConstructor(
+        RenderItemInFrameEvent, new Class[]{EntityItemFrame.class, RenderItemFrame.class}
+    );
     public static ReflectorClass RenderLivingEvent_Pre = new ReflectorClass("net.minecraftforge.client.event.RenderLivingEvent$Pre");
-    public static ReflectorConstructor RenderLivingEvent_Pre_Constructor = new ReflectorConstructor(RenderLivingEvent_Pre, new Class[] {EntityLivingBase.class, RendererLivingEntity.class, Double.TYPE, Double.TYPE, Double.TYPE});
+    public static ReflectorConstructor RenderLivingEvent_Pre_Constructor = new ReflectorConstructor(
+        RenderLivingEvent_Pre, new Class[]{EntityLivingBase.class, RendererLivingEntity.class, double.class, double.class, double.class}
+    );
     public static ReflectorClass RenderLivingEvent_Post = new ReflectorClass("net.minecraftforge.client.event.RenderLivingEvent$Post");
-    public static ReflectorConstructor RenderLivingEvent_Post_Constructor = new ReflectorConstructor(RenderLivingEvent_Post, new Class[] {EntityLivingBase.class, RendererLivingEntity.class, Double.TYPE, Double.TYPE, Double.TYPE});
+    public static ReflectorConstructor RenderLivingEvent_Post_Constructor = new ReflectorConstructor(
+        RenderLivingEvent_Post, new Class[]{EntityLivingBase.class, RendererLivingEntity.class, double.class, double.class, double.class}
+    );
     public static ReflectorClass RenderLivingEvent_Specials_Pre = new ReflectorClass("net.minecraftforge.client.event.RenderLivingEvent$Specials$Pre");
-    public static ReflectorConstructor RenderLivingEvent_Specials_Pre_Constructor = new ReflectorConstructor(RenderLivingEvent_Specials_Pre, new Class[] {EntityLivingBase.class, RendererLivingEntity.class, Double.TYPE, Double.TYPE, Double.TYPE});
+    public static ReflectorConstructor RenderLivingEvent_Specials_Pre_Constructor = new ReflectorConstructor(
+        RenderLivingEvent_Specials_Pre, new Class[]{EntityLivingBase.class, RendererLivingEntity.class, double.class, double.class, double.class}
+    );
     public static ReflectorClass RenderLivingEvent_Specials_Post = new ReflectorClass("net.minecraftforge.client.event.RenderLivingEvent$Specials$Post");
-    public static ReflectorConstructor RenderLivingEvent_Specials_Post_Constructor = new ReflectorConstructor(RenderLivingEvent_Specials_Post, new Class[] {EntityLivingBase.class, RendererLivingEntity.class, Double.TYPE, Double.TYPE, Double.TYPE});
+    public static ReflectorConstructor RenderLivingEvent_Specials_Post_Constructor = new ReflectorConstructor(
+        RenderLivingEvent_Specials_Post, new Class[]{EntityLivingBase.class, RendererLivingEntity.class, double.class, double.class, double.class}
+    );
     public static ReflectorClass SplashScreen = new ReflectorClass("net.minecraftforge.fml.client.SplashProgress");
     public static ReflectorClass WorldEvent_Load = new ReflectorClass("net.minecraftforge.event.world.WorldEvent$Load");
-    public static ReflectorConstructor WorldEvent_Load_Constructor = new ReflectorConstructor(WorldEvent_Load, new Class[] {World.class});
+    public static ReflectorConstructor WorldEvent_Load_Constructor = new ReflectorConstructor(WorldEvent_Load, new Class[]{World.class});
     private static boolean logVanilla = logEntry("*** Reflector Vanilla ***");
     public static ReflectorClass ChunkProviderClient = new ReflectorClass(ChunkProviderClient.class);
     public static ReflectorField ChunkProviderClient_chunkMapping = new ReflectorField(ChunkProviderClient, LongHashMap.class);
+    public static ReflectorClass EntityVillager = new ReflectorClass(EntityVillager.class);
+    public static ReflectorField EntityVillager_careerId = new ReflectorField(
+        new FieldLocatorTypes(
+            EntityVillager.class,
+            new Class[0],
+            int.class,
+            new Class[]{int.class, boolean.class, boolean.class, InventoryBasic.class},
+            "EntityVillager.careerId"
+        )
+    );
+    public static ReflectorField EntityVillager_careerLevel = new ReflectorField(
+        new FieldLocatorTypes(
+            EntityVillager.class,
+            new Class[]{int.class},
+            int.class,
+            new Class[]{boolean.class, boolean.class, InventoryBasic.class},
+            "EntityVillager.careerLevel"
+        )
+    );
+    public static ReflectorClass GuiBeacon = new ReflectorClass(GuiBeacon.class);
+    public static ReflectorField GuiBeacon_tileBeacon = new ReflectorField(GuiBeacon, IInventory.class);
+    public static ReflectorClass GuiBrewingStand = new ReflectorClass(GuiBrewingStand.class);
+    public static ReflectorField GuiBrewingStand_tileBrewingStand = new ReflectorField(GuiBrewingStand, IInventory.class);
+    public static ReflectorClass GuiChest = new ReflectorClass(GuiChest.class);
+    public static ReflectorField GuiChest_lowerChestInventory = new ReflectorField(GuiChest, IInventory.class, 1);
+    public static ReflectorClass GuiEnchantment = new ReflectorClass(GuiEnchantment.class);
+    public static ReflectorField GuiEnchantment_nameable = new ReflectorField(GuiEnchantment, IWorldNameable.class);
+    public static ReflectorClass GuiFurnace = new ReflectorClass(GuiFurnace.class);
+    public static ReflectorField GuiFurnace_tileFurnace = new ReflectorField(GuiFurnace, IInventory.class);
+    public static ReflectorClass GuiHopper = new ReflectorClass(GuiHopper.class);
+    public static ReflectorField GuiHopper_hopperInventory = new ReflectorField(GuiHopper, IInventory.class, 1);
     public static ReflectorClass GuiMainMenu = new ReflectorClass(GuiMainMenu.class);
     public static ReflectorField GuiMainMenu_splashText = new ReflectorField(GuiMainMenu, String.class);
     public static ReflectorClass Minecraft = new ReflectorClass(Minecraft.class);
@@ -322,7 +395,7 @@ public class Reflector
     public static ReflectorClass ModelWolf = new ReflectorClass(ModelWolf.class);
     public static ReflectorField ModelWolf_tail = new ReflectorField(ModelWolf, ModelRenderer.class, 6);
     public static ReflectorField ModelWolf_mane = new ReflectorField(ModelWolf, ModelRenderer.class, 7);
-    public static ReflectorClass OptiFineClassTransformer = new ReflectorClass("net.optifine.OptiFineClassTransformer");
+    public static ReflectorClass OptiFineClassTransformer = new ReflectorClass("optifine.OptiFineClassTransformer");
     public static ReflectorField OptiFineClassTransformer_instance = new ReflectorField(OptiFineClassTransformer, "instance");
     public static ReflectorMethod OptiFineClassTransformer_getOptiFineResource = new ReflectorMethod(OptiFineClassTransformer, "getOptiFineResource");
     public static ReflectorClass RenderBoat = new ReflectorClass(RenderBoat.class);
@@ -348,629 +421,447 @@ public class Reflector
     public static ReflectorField TileEntitySkullRenderer_skeletonHead = new ReflectorField(TileEntitySkullRenderer, ModelSkeletonHead.class, 0);
     public static ReflectorField TileEntitySkullRenderer_humanoidHead = new ReflectorField(TileEntitySkullRenderer, ModelSkeletonHead.class, 1);
 
-    public static void callVoid(ReflectorMethod p_callVoid_0_, Object... p_callVoid_1_)
-    {
-        try
-        {
-            Method method = p_callVoid_0_.getTargetMethod();
-
-            if (method == null)
-            {
+    public static void callVoid(ReflectorMethod refMethod, Object... params) {
+        try {
+            Method method = refMethod.getTargetMethod();
+            if (method == null) {
                 return;
             }
 
-            method.invoke((Object)null, p_callVoid_1_);
-        }
-        catch (Throwable throwable)
-        {
-            handleException(throwable, (Object)null, p_callVoid_0_, p_callVoid_1_);
+            method.invoke(null, params);
+        } catch (Throwable throwable) {
+            handleException(throwable, null, refMethod, params);
         }
     }
 
-    public static boolean callBoolean(ReflectorMethod p_callBoolean_0_, Object... p_callBoolean_1_)
-    {
-        try
-        {
-            Method method = p_callBoolean_0_.getTargetMethod();
-
-            if (method == null)
-            {
+    public static boolean callBoolean(ReflectorMethod refMethod, Object... params) {
+        try {
+            Method method = refMethod.getTargetMethod();
+            if (method == null) {
                 return false;
             }
-            else
-            {
-                Boolean obool = (Boolean)method.invoke((Object)null, p_callBoolean_1_);
-                return obool.booleanValue();
-            }
-        }
-        catch (Throwable throwable)
-        {
-            handleException(throwable, (Object)null, p_callBoolean_0_, p_callBoolean_1_);
+
+            Boolean obool = (Boolean)method.invoke(null, params);
+            return obool;
+        } catch (Throwable throwable) {
+            handleException(throwable, null, refMethod, params);
             return false;
         }
     }
 
-    public static int callInt(ReflectorMethod p_callInt_0_, Object... p_callInt_1_)
-    {
-        try
-        {
-            Method method = p_callInt_0_.getTargetMethod();
-
-            if (method == null)
-            {
+    public static int callInt(ReflectorMethod refMethod, Object... params) {
+        try {
+            Method method = refMethod.getTargetMethod();
+            if (method == null) {
                 return 0;
             }
-            else
-            {
-                Integer integer = (Integer)method.invoke((Object)null, p_callInt_1_);
-                return integer.intValue();
-            }
-        }
-        catch (Throwable throwable)
-        {
-            handleException(throwable, (Object)null, p_callInt_0_, p_callInt_1_);
+
+            Integer integer = (Integer)method.invoke(null, params);
+            return integer;
+        } catch (Throwable throwable) {
+            handleException(throwable, null, refMethod, params);
             return 0;
         }
     }
 
-    public static float callFloat(ReflectorMethod p_callFloat_0_, Object... p_callFloat_1_)
-    {
-        try
-        {
-            Method method = p_callFloat_0_.getTargetMethod();
-
-            if (method == null)
-            {
+    public static float callFloat(ReflectorMethod refMethod, Object... params) {
+        try {
+            Method method = refMethod.getTargetMethod();
+            if (method == null) {
                 return 0.0F;
             }
-            else
-            {
-                Float f = (Float)method.invoke((Object)null, p_callFloat_1_);
-                return f.floatValue();
-            }
-        }
-        catch (Throwable throwable)
-        {
-            handleException(throwable, (Object)null, p_callFloat_0_, p_callFloat_1_);
+
+            Float f = (Float)method.invoke(null, params);
+            return f;
+        } catch (Throwable throwable) {
+            handleException(throwable, null, refMethod, params);
             return 0.0F;
         }
     }
 
-    public static double callDouble(ReflectorMethod p_callDouble_0_, Object... p_callDouble_1_)
-    {
-        try
-        {
-            Method method = p_callDouble_0_.getTargetMethod();
+    public static double callDouble(ReflectorMethod refMethod, Object... params) {
+        try {
+            Method method = refMethod.getTargetMethod();
+            if (method == null) {
+                return 0.0;
+            }
 
-            if (method == null)
-            {
-                return 0.0D;
-            }
-            else
-            {
-                Double d0 = (Double)method.invoke((Object)null, p_callDouble_1_);
-                return d0.doubleValue();
-            }
-        }
-        catch (Throwable throwable)
-        {
-            handleException(throwable, (Object)null, p_callDouble_0_, p_callDouble_1_);
-            return 0.0D;
+            Double d0 = (Double)method.invoke(null, params);
+            return d0;
+        } catch (Throwable throwable) {
+            handleException(throwable, null, refMethod, params);
+            return 0.0;
         }
     }
 
-    public static String callString(ReflectorMethod p_callString_0_, Object... p_callString_1_)
-    {
-        try
-        {
-            Method method = p_callString_0_.getTargetMethod();
-
-            if (method == null)
-            {
-                return null;
-            }
-            else
-            {
-                String s = (String)method.invoke((Object)null, p_callString_1_);
-                return s;
-            }
-        }
-        catch (Throwable throwable)
-        {
-            handleException(throwable, (Object)null, p_callString_0_, p_callString_1_);
+    public static String callString(ReflectorMethod refMethod, Object... params) {
+        try {
+            Method method = refMethod.getTargetMethod();
+            return method == null ? null : (String)method.invoke(null, params);
+        } catch (Throwable throwable) {
+            handleException(throwable, null, refMethod, params);
             return null;
         }
     }
 
-    public static Object call(ReflectorMethod p_call_0_, Object... p_call_1_)
-    {
-        try
-        {
-            Method method = p_call_0_.getTargetMethod();
-
-            if (method == null)
-            {
-                return null;
-            }
-            else
-            {
-                Object object = method.invoke((Object)null, p_call_1_);
-                return object;
-            }
-        }
-        catch (Throwable throwable)
-        {
-            handleException(throwable, (Object)null, p_call_0_, p_call_1_);
+    public static Object call(ReflectorMethod refMethod, Object... params) {
+        try {
+            Method method = refMethod.getTargetMethod();
+            return method == null ? null : method.invoke(null, params);
+        } catch (Throwable throwable) {
+            handleException(throwable, null, refMethod, params);
             return null;
         }
     }
 
-    public static void callVoid(Object p_callVoid_0_, ReflectorMethod p_callVoid_1_, Object... p_callVoid_2_)
-    {
-        try
-        {
-            if (p_callVoid_0_ == null)
-            {
+    public static void callVoid(Object obj, ReflectorMethod refMethod, Object... params) {
+        try {
+            if (obj == null) {
                 return;
             }
 
-            Method method = p_callVoid_1_.getTargetMethod();
-
-            if (method == null)
-            {
+            Method method = refMethod.getTargetMethod();
+            if (method == null) {
                 return;
             }
 
-            method.invoke(p_callVoid_0_, p_callVoid_2_);
-        }
-        catch (Throwable throwable)
-        {
-            handleException(throwable, p_callVoid_0_, p_callVoid_1_, p_callVoid_2_);
+            method.invoke(obj, params);
+        } catch (Throwable throwable) {
+            handleException(throwable, obj, refMethod, params);
         }
     }
 
-    public static boolean callBoolean(Object p_callBoolean_0_, ReflectorMethod p_callBoolean_1_, Object... p_callBoolean_2_)
-    {
-        try
-        {
-            Method method = p_callBoolean_1_.getTargetMethod();
-
-            if (method == null)
-            {
+    public static boolean callBoolean(Object obj, ReflectorMethod refMethod, Object... params) {
+        try {
+            Method method = refMethod.getTargetMethod();
+            if (method == null) {
                 return false;
             }
-            else
-            {
-                Boolean obool = (Boolean)method.invoke(p_callBoolean_0_, p_callBoolean_2_);
-                return obool.booleanValue();
-            }
-        }
-        catch (Throwable throwable)
-        {
-            handleException(throwable, p_callBoolean_0_, p_callBoolean_1_, p_callBoolean_2_);
+
+            Boolean obool = (Boolean)method.invoke(obj, params);
+            return obool;
+        } catch (Throwable throwable) {
+            handleException(throwable, obj, refMethod, params);
             return false;
         }
     }
 
-    public static int callInt(Object p_callInt_0_, ReflectorMethod p_callInt_1_, Object... p_callInt_2_)
-    {
-        try
-        {
-            Method method = p_callInt_1_.getTargetMethod();
-
-            if (method == null)
-            {
+    public static int callInt(Object obj, ReflectorMethod refMethod, Object... params) {
+        try {
+            Method method = refMethod.getTargetMethod();
+            if (method == null) {
                 return 0;
             }
-            else
-            {
-                Integer integer = (Integer)method.invoke(p_callInt_0_, p_callInt_2_);
-                return integer.intValue();
-            }
-        }
-        catch (Throwable throwable)
-        {
-            handleException(throwable, p_callInt_0_, p_callInt_1_, p_callInt_2_);
+
+            Integer integer = (Integer)method.invoke(obj, params);
+            return integer;
+        } catch (Throwable throwable) {
+            handleException(throwable, obj, refMethod, params);
             return 0;
         }
     }
 
-    public static float callFloat(Object p_callFloat_0_, ReflectorMethod p_callFloat_1_, Object... p_callFloat_2_)
-    {
-        try
-        {
-            Method method = p_callFloat_1_.getTargetMethod();
-
-            if (method == null)
-            {
+    public static float callFloat(Object obj, ReflectorMethod refMethod, Object... params) {
+        try {
+            Method method = refMethod.getTargetMethod();
+            if (method == null) {
                 return 0.0F;
             }
-            else
-            {
-                Float f = (Float)method.invoke(p_callFloat_0_, p_callFloat_2_);
-                return f.floatValue();
-            }
-        }
-        catch (Throwable throwable)
-        {
-            handleException(throwable, p_callFloat_0_, p_callFloat_1_, p_callFloat_2_);
+
+            Float f = (Float)method.invoke(obj, params);
+            return f;
+        } catch (Throwable throwable) {
+            handleException(throwable, obj, refMethod, params);
             return 0.0F;
         }
     }
 
-    public static double callDouble(Object p_callDouble_0_, ReflectorMethod p_callDouble_1_, Object... p_callDouble_2_)
-    {
-        try
-        {
-            Method method = p_callDouble_1_.getTargetMethod();
+    public static double callDouble(Object obj, ReflectorMethod refMethod, Object... params) {
+        try {
+            Method method = refMethod.getTargetMethod();
+            if (method == null) {
+                return 0.0;
+            }
 
-            if (method == null)
-            {
-                return 0.0D;
-            }
-            else
-            {
-                Double d0 = (Double)method.invoke(p_callDouble_0_, p_callDouble_2_);
-                return d0.doubleValue();
-            }
-        }
-        catch (Throwable throwable)
-        {
-            handleException(throwable, p_callDouble_0_, p_callDouble_1_, p_callDouble_2_);
-            return 0.0D;
+            Double d0 = (Double)method.invoke(obj, params);
+            return d0;
+        } catch (Throwable throwable) {
+            handleException(throwable, obj, refMethod, params);
+            return 0.0;
         }
     }
 
-    public static String callString(Object p_callString_0_, ReflectorMethod p_callString_1_, Object... p_callString_2_)
-    {
-        try
-        {
-            Method method = p_callString_1_.getTargetMethod();
-
-            if (method == null)
-            {
-                return null;
-            }
-            else
-            {
-                String s = (String)method.invoke(p_callString_0_, p_callString_2_);
-                return s;
-            }
-        }
-        catch (Throwable throwable)
-        {
-            handleException(throwable, p_callString_0_, p_callString_1_, p_callString_2_);
+    public static String callString(Object obj, ReflectorMethod refMethod, Object... params) {
+        try {
+            Method method = refMethod.getTargetMethod();
+            return method == null ? null : (String)method.invoke(obj, params);
+        } catch (Throwable throwable) {
+            handleException(throwable, obj, refMethod, params);
             return null;
         }
     }
 
-    public static Object call(Object p_call_0_, ReflectorMethod p_call_1_, Object... p_call_2_)
-    {
-        try
-        {
-            Method method = p_call_1_.getTargetMethod();
-
-            if (method == null)
-            {
-                return null;
-            }
-            else
-            {
-                Object object = method.invoke(p_call_0_, p_call_2_);
-                return object;
-            }
-        }
-        catch (Throwable throwable)
-        {
-            handleException(throwable, p_call_0_, p_call_1_, p_call_2_);
+    public static Object call(Object obj, ReflectorMethod refMethod, Object... params) {
+        try {
+            Method method = refMethod.getTargetMethod();
+            return method == null ? null : method.invoke(obj, params);
+        } catch (Throwable throwable) {
+            handleException(throwable, obj, refMethod, params);
             return null;
         }
     }
 
-    public static Object getFieldValue(ReflectorField p_getFieldValue_0_)
-    {
-        return getFieldValue((Object)null, p_getFieldValue_0_);
+    public static Object getFieldValue(ReflectorField refField) {
+        return getFieldValue(null, refField);
     }
 
-    public static Object getFieldValue(Object p_getFieldValue_0_, ReflectorField p_getFieldValue_1_)
-    {
-        try
-        {
-            Field field = p_getFieldValue_1_.getTargetField();
-
-            if (field == null)
-            {
-                return null;
-            }
-            else
-            {
-                Object object = field.get(p_getFieldValue_0_);
-                return object;
-            }
-        }
-        catch (Throwable throwable)
-        {
+    public static Object getFieldValue(Object obj, ReflectorField refField) {
+        try {
+            Field field = refField.getTargetField();
+            return field == null ? null : field.get(obj);
+        } catch (Throwable throwable) {
             throwable.printStackTrace();
             return null;
         }
     }
 
-    public static Object getFieldValue(ReflectorFields p_getFieldValue_0_, int p_getFieldValue_1_)
-    {
-        ReflectorField reflectorfield = p_getFieldValue_0_.getReflectorField(p_getFieldValue_1_);
+    public static boolean getFieldValueBoolean(Object obj, ReflectorField refField, boolean def) {
+        try {
+            Field field = refField.getTargetField();
+            return field == null ? def : field.getBoolean(obj);
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
+            return def;
+        }
+    }
+
+    public static Object getFieldValue(ReflectorFields refFields, int index) {
+        ReflectorField reflectorfield = refFields.getReflectorField(index);
         return reflectorfield == null ? null : getFieldValue(reflectorfield);
     }
 
-    public static Object getFieldValue(Object p_getFieldValue_0_, ReflectorFields p_getFieldValue_1_, int p_getFieldValue_2_)
-    {
-        ReflectorField reflectorfield = p_getFieldValue_1_.getReflectorField(p_getFieldValue_2_);
-        return reflectorfield == null ? null : getFieldValue(p_getFieldValue_0_, reflectorfield);
+    public static Object getFieldValue(Object obj, ReflectorFields refFields, int index) {
+        ReflectorField reflectorfield = refFields.getReflectorField(index);
+        return reflectorfield == null ? null : getFieldValue(obj, reflectorfield);
     }
 
-    public static float getFieldValueFloat(Object p_getFieldValueFloat_0_, ReflectorField p_getFieldValueFloat_1_, float p_getFieldValueFloat_2_)
-    {
-        Object object = getFieldValue(p_getFieldValueFloat_0_, p_getFieldValueFloat_1_);
-
-        if (!(object instanceof Float))
-        {
-            return p_getFieldValueFloat_2_;
-        }
-        else
-        {
-            Float f = (Float)object;
-            return f.floatValue();
+    public static float getFieldValueFloat(Object obj, ReflectorField refField, float def) {
+        try {
+            Field field = refField.getTargetField();
+            return field == null ? def : field.getFloat(obj);
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
+            return def;
         }
     }
 
-    public static boolean setFieldValue(ReflectorField p_setFieldValue_0_, Object p_setFieldValue_1_)
-    {
-        return setFieldValue((Object)null, p_setFieldValue_0_, p_setFieldValue_1_);
+    public static int getFieldValueInt(Object obj, ReflectorField refField, int def) {
+        try {
+            Field field = refField.getTargetField();
+            return field == null ? def : field.getInt(obj);
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
+            return def;
+        }
     }
 
-    public static boolean setFieldValue(Object p_setFieldValue_0_, ReflectorField p_setFieldValue_1_, Object p_setFieldValue_2_)
-    {
-        try
-        {
-            Field field = p_setFieldValue_1_.getTargetField();
+    public static boolean setFieldValue(ReflectorField refField, Object value) {
+        return setFieldValue(null, refField, value);
+    }
 
-            if (field == null)
-            {
+    public static boolean setFieldValue(Object obj, ReflectorField refField, Object value) {
+        try {
+            Field field = refField.getTargetField();
+            if (field == null) {
                 return false;
             }
-            else
-            {
-                field.set(p_setFieldValue_0_, p_setFieldValue_2_);
-                return true;
-            }
-        }
-        catch (Throwable throwable)
-        {
+
+            field.set(obj, value);
+            return true;
+        } catch (Throwable throwable) {
             throwable.printStackTrace();
             return false;
         }
     }
 
-    public static boolean postForgeBusEvent(ReflectorConstructor p_postForgeBusEvent_0_, Object... p_postForgeBusEvent_1_)
-    {
-        Object object = newInstance(p_postForgeBusEvent_0_, p_postForgeBusEvent_1_);
+    public static boolean setFieldValueInt(ReflectorField refField, int value) {
+        return setFieldValueInt(null, refField, value);
+    }
+
+    public static boolean setFieldValueInt(Object obj, ReflectorField refField, int value) {
+        try {
+            Field field = refField.getTargetField();
+            if (field == null) {
+                return false;
+            }
+
+            field.setInt(obj, value);
+            return true;
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
+            return false;
+        }
+    }
+
+    public static boolean postForgeBusEvent(ReflectorConstructor constr, Object... params) {
+        Object object = newInstance(constr, params);
         return object == null ? false : postForgeBusEvent(object);
     }
 
-    public static boolean postForgeBusEvent(Object p_postForgeBusEvent_0_)
-    {
-        if (p_postForgeBusEvent_0_ == null)
-        {
+    public static boolean postForgeBusEvent(Object event) {
+        if (event == null) {
             return false;
         }
-        else
-        {
-            Object object = getFieldValue(MinecraftForge_EVENT_BUS);
 
-            if (object == null)
-            {
-                return false;
-            }
-            else
-            {
-                Object object1 = call(object, EventBus_post, new Object[] {p_postForgeBusEvent_0_});
-
-                if (!(object1 instanceof Boolean))
-                {
-                    return false;
-                }
-                else
-                {
-                    Boolean obool = (Boolean)object1;
-                    return obool.booleanValue();
-                }
-            }
+        Object object = getFieldValue(MinecraftForge_EVENT_BUS);
+        if (object == null) {
+            return false;
         }
+
+        Object object1 = call(object, EventBus_post, event);
+        if (!(object1 instanceof Boolean)) {
+            return false;
+        }
+
+        Boolean obool = (Boolean)object1;
+        return obool;
     }
 
-    public static Object newInstance(ReflectorConstructor p_newInstance_0_, Object... p_newInstance_1_)
-    {
-        Constructor constructor = p_newInstance_0_.getTargetConstructor();
-
-        if (constructor == null)
-        {
+    public static Object newInstance(ReflectorConstructor constr, Object... params) {
+        Constructor constructor = constr.getTargetConstructor();
+        if (constructor == null) {
             return null;
         }
-        else
-        {
-            try
-            {
-                Object object = constructor.newInstance(p_newInstance_1_);
-                return object;
-            }
-            catch (Throwable throwable)
-            {
-                handleException(throwable, p_newInstance_0_, p_newInstance_1_);
-                return null;
-            }
+
+        try {
+            return constructor.newInstance(params);
+        } catch (Throwable throwable) {
+            handleException(throwable, constr, params);
+            return null;
         }
     }
 
-    public static boolean matchesTypes(Class[] p_matchesTypes_0_, Class[] p_matchesTypes_1_)
-    {
-        if (p_matchesTypes_0_.length != p_matchesTypes_1_.length)
-        {
+    public static boolean matchesTypes(Class[] pTypes, Class[] cTypes) {
+        if (pTypes.length != cTypes.length) {
             return false;
         }
-        else
-        {
-            for (int i = 0; i < p_matchesTypes_1_.length; ++i)
-            {
-                Class oclass = p_matchesTypes_0_[i];
-                Class oclass1 = p_matchesTypes_1_[i];
 
-                if (oclass != oclass1)
-                {
-                    return false;
-                }
+        for (int i = 0; i < cTypes.length; i++) {
+            Class oclass = pTypes[i];
+            Class oclass1 = cTypes[i];
+            if (oclass != oclass1) {
+                return false;
             }
-
-            return true;
         }
+
+        return true;
     }
 
-    private static void dbgCall(boolean p_dbgCall_0_, String p_dbgCall_1_, ReflectorMethod p_dbgCall_2_, Object[] p_dbgCall_3_, Object p_dbgCall_4_)
-    {
-        String s = p_dbgCall_2_.getTargetMethod().getDeclaringClass().getName();
-        String s1 = p_dbgCall_2_.getTargetMethod().getName();
+    private static void dbgCall(boolean isStatic, String callType, ReflectorMethod refMethod, Object[] params, Object retVal) {
+        String s = refMethod.getTargetMethod().getDeclaringClass().getName();
+        String s1 = refMethod.getTargetMethod().getName();
         String s2 = "";
-
-        if (p_dbgCall_0_)
-        {
+        if (isStatic) {
             s2 = " static";
         }
 
-        Config.dbg(p_dbgCall_1_ + s2 + " " + s + "." + s1 + "(" + Config.arrayToString(p_dbgCall_3_) + ") => " + p_dbgCall_4_);
+        Config.dbg(callType + s2 + " " + s + "." + s1 + "(" + Config.arrayToString(params) + ") => " + retVal);
     }
 
-    private static void dbgCallVoid(boolean p_dbgCallVoid_0_, String p_dbgCallVoid_1_, ReflectorMethod p_dbgCallVoid_2_, Object[] p_dbgCallVoid_3_)
-    {
-        String s = p_dbgCallVoid_2_.getTargetMethod().getDeclaringClass().getName();
-        String s1 = p_dbgCallVoid_2_.getTargetMethod().getName();
+    private static void dbgCallVoid(boolean isStatic, String callType, ReflectorMethod refMethod, Object[] params) {
+        String s = refMethod.getTargetMethod().getDeclaringClass().getName();
+        String s1 = refMethod.getTargetMethod().getName();
         String s2 = "";
-
-        if (p_dbgCallVoid_0_)
-        {
+        if (isStatic) {
             s2 = " static";
         }
 
-        Config.dbg(p_dbgCallVoid_1_ + s2 + " " + s + "." + s1 + "(" + Config.arrayToString(p_dbgCallVoid_3_) + ")");
+        Config.dbg(callType + s2 + " " + s + "." + s1 + "(" + Config.arrayToString(params) + ")");
     }
 
-    private static void dbgFieldValue(boolean p_dbgFieldValue_0_, String p_dbgFieldValue_1_, ReflectorField p_dbgFieldValue_2_, Object p_dbgFieldValue_3_)
-    {
-        String s = p_dbgFieldValue_2_.getTargetField().getDeclaringClass().getName();
-        String s1 = p_dbgFieldValue_2_.getTargetField().getName();
+    private static void dbgFieldValue(boolean isStatic, String accessType, ReflectorField refField, Object val) {
+        String s = refField.getTargetField().getDeclaringClass().getName();
+        String s1 = refField.getTargetField().getName();
         String s2 = "";
-
-        if (p_dbgFieldValue_0_)
-        {
+        if (isStatic) {
             s2 = " static";
         }
 
-        Config.dbg(p_dbgFieldValue_1_ + s2 + " " + s + "." + s1 + " => " + p_dbgFieldValue_3_);
+        Config.dbg(accessType + s2 + " " + s + "." + s1 + " => " + val);
     }
 
-    private static void handleException(Throwable p_handleException_0_, Object p_handleException_1_, ReflectorMethod p_handleException_2_, Object[] p_handleException_3_)
-    {
-        if (p_handleException_0_ instanceof InvocationTargetException)
-        {
-            Throwable throwable = p_handleException_0_.getCause();
-
-            if (throwable instanceof RuntimeException)
-            {
+    private static void handleException(Throwable e, Object obj, ReflectorMethod refMethod, Object[] params) {
+        if (e instanceof InvocationTargetException) {
+            Throwable throwable = e.getCause();
+            if (throwable instanceof RuntimeException) {
                 RuntimeException runtimeexception = (RuntimeException)throwable;
                 throw runtimeexception;
             }
-            else
-            {
-                p_handleException_0_.printStackTrace();
-            }
-        }
-        else
-        {
-            if (p_handleException_0_ instanceof IllegalArgumentException)
-            {
+
+            e.printStackTrace();
+        } else {
+            if (e instanceof IllegalArgumentException) {
                 Config.warn("*** IllegalArgumentException ***");
-                Config.warn("Method: " + p_handleException_2_.getTargetMethod());
-                Config.warn("Object: " + p_handleException_1_);
-                Config.warn("Parameter classes: " + Config.arrayToString(getClasses(p_handleException_3_)));
-                Config.warn("Parameters: " + Config.arrayToString(p_handleException_3_));
+                Config.warn("Method: " + refMethod.getTargetMethod());
+                Config.warn("Object: " + obj);
+                Config.warn("Parameter classes: " + Config.arrayToString(getClasses(params)));
+                Config.warn("Parameters: " + Config.arrayToString(params));
             }
 
             Config.warn("*** Exception outside of method ***");
-            Config.warn("Method deactivated: " + p_handleException_2_.getTargetMethod());
-            p_handleException_2_.deactivate();
-            p_handleException_0_.printStackTrace();
+            Config.warn("Method deactivated: " + refMethod.getTargetMethod());
+            refMethod.deactivate();
+            e.printStackTrace();
         }
     }
 
-    private static void handleException(Throwable p_handleException_0_, ReflectorConstructor p_handleException_1_, Object[] p_handleException_2_)
-    {
-        if (p_handleException_0_ instanceof InvocationTargetException)
-        {
-            p_handleException_0_.printStackTrace();
-        }
-        else
-        {
-            if (p_handleException_0_ instanceof IllegalArgumentException)
-            {
+    private static void handleException(Throwable e, ReflectorConstructor refConstr, Object[] params) {
+        if (e instanceof InvocationTargetException) {
+            e.printStackTrace();
+        } else {
+            if (e instanceof IllegalArgumentException) {
                 Config.warn("*** IllegalArgumentException ***");
-                Config.warn("Constructor: " + p_handleException_1_.getTargetConstructor());
-                Config.warn("Parameter classes: " + Config.arrayToString(getClasses(p_handleException_2_)));
-                Config.warn("Parameters: " + Config.arrayToString(p_handleException_2_));
+                Config.warn("Constructor: " + refConstr.getTargetConstructor());
+                Config.warn("Parameter classes: " + Config.arrayToString(getClasses(params)));
+                Config.warn("Parameters: " + Config.arrayToString(params));
             }
 
             Config.warn("*** Exception outside of constructor ***");
-            Config.warn("Constructor deactivated: " + p_handleException_1_.getTargetConstructor());
-            p_handleException_1_.deactivate();
-            p_handleException_0_.printStackTrace();
+            Config.warn("Constructor deactivated: " + refConstr.getTargetConstructor());
+            refConstr.deactivate();
+            e.printStackTrace();
         }
     }
 
-    private static Object[] getClasses(Object[] p_getClasses_0_)
-    {
-        if (p_getClasses_0_ == null)
-        {
+    private static Object[] getClasses(Object[] objs) {
+        if (objs == null) {
             return new Class[0];
         }
-        else
-        {
-            Class[] aclass = new Class[p_getClasses_0_.length];
 
-            for (int i = 0; i < aclass.length; ++i)
-            {
-                Object object = p_getClasses_0_[i];
+        Class[] aclass = new Class[objs.length];
 
-                if (object != null)
-                {
-                    aclass[i] = object.getClass();
-                }
+        for (int i = 0; i < aclass.length; i++) {
+            Object object = objs[i];
+            if (object != null) {
+                aclass[i] = object.getClass();
             }
-
-            return aclass;
         }
+
+        return aclass;
     }
 
-    private static ReflectorField[] getReflectorFields(ReflectorClass p_getReflectorFields_0_, Class p_getReflectorFields_1_, int p_getReflectorFields_2_)
-    {
-        ReflectorField[] areflectorfield = new ReflectorField[p_getReflectorFields_2_];
+    private static ReflectorField[] getReflectorFields(ReflectorClass parentClass, Class fieldType, int count) {
+        ReflectorField[] areflectorfield = new ReflectorField[count];
 
-        for (int i = 0; i < areflectorfield.length; ++i)
-        {
-            areflectorfield[i] = new ReflectorField(p_getReflectorFields_0_, p_getReflectorFields_1_, i);
+        for (int i = 0; i < areflectorfield.length; i++) {
+            areflectorfield[i] = new ReflectorField(parentClass, fieldType, i);
         }
 
         return areflectorfield;
     }
 
-    private static boolean logEntry(String p_logEntry_0_)
-    {
-        Config.dbg(p_logEntry_0_);
+    private static boolean logEntry(String str) {
+        Config.dbg(str);
         return true;
     }
 }

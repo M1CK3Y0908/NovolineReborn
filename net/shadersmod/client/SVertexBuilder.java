@@ -1,5 +1,9 @@
 package net.shadersmod.client;
 
+import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
 import net.minecraft.block.Block;
 import net.minecraft.block.state.BlockStateBase;
 import net.minecraft.block.state.IBlockState;
@@ -9,10 +13,6 @@ import net.minecraft.util.BlockPos;
 import net.minecraft.world.IBlockAccess;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL20;
-
-import java.nio.ByteBuffer;
-import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
 
 public class SVertexBuilder {
     int vertexSize;
@@ -35,22 +35,21 @@ public class SVertexBuilder {
     }
 
     public void pushEntity(long data) {
-        ++this.entityDataIndex;
+        this.entityDataIndex++;
         this.entityData[this.entityDataIndex] = data;
     }
 
     public void popEntity() {
         this.entityData[this.entityDataIndex] = 0L;
-        --this.entityDataIndex;
+        this.entityDataIndex--;
     }
 
     public static void pushEntity(IBlockState blockState, BlockPos blockPos, IBlockAccess blockAccess, WorldRenderer wrr) {
         Block block = blockState.getBlock();
         int i;
         int j;
-
         if (blockState instanceof BlockStateBase) {
-            BlockStateBase blockstatebase = (BlockStateBase) blockState;
+            BlockStateBase blockstatebase = (BlockStateBase)blockState;
             i = blockstatebase.getBlockId();
             j = blockstatebase.getMetadata();
         } else {
@@ -62,7 +61,7 @@ public class SVertexBuilder {
         int i1 = block.getRenderType();
         int k = ((i1 & 65535) << 16) + (i & 65535);
         int l = j & 65535;
-        wrr.sVertexBuilder.pushEntity(((long) l << 32) + (long) k);
+        wrr.sVertexBuilder.pushEntity(((long)l << 32) + k);
     }
 
     public static void popEntity(WorldRenderer wrr) {
@@ -94,16 +93,15 @@ public class SVertexBuilder {
 
     public static void endAddVertex(WorldRenderer wrr) {
         SVertexBuilder svertexbuilder = wrr.sVertexBuilder;
-
         if (svertexbuilder.vertexSize == 14) {
             if (wrr.drawMode == 7 && wrr.vertexCount % 4 == 0) {
-                svertexbuilder.calcNormal(wrr, wrr.func_181664_j() - 4 * svertexbuilder.vertexSize);
+                svertexbuilder.calcNormal(wrr, wrr.getBufferSize() - 4 * svertexbuilder.vertexSize);
             }
 
             long i = svertexbuilder.entityData[svertexbuilder.entityDataIndex];
-            int j = wrr.func_181664_j() - 14 + 12;
-            wrr.rawIntBuffer.put(j, (int) i);
-            wrr.rawIntBuffer.put(j + 1, (int) (i >> 32));
+            int j = wrr.getBufferSize() - 14 + 12;
+            wrr.rawIntBuffer.put(j, (int)i);
+            wrr.rawIntBuffer.put(j + 1, (int)(i >> 32));
         }
     }
 
@@ -113,29 +111,27 @@ public class SVertexBuilder {
         }
 
         SVertexBuilder svertexbuilder = wrr.sVertexBuilder;
-
         if (svertexbuilder.vertexSize == 14) {
             long i = svertexbuilder.entityData[svertexbuilder.entityDataIndex];
 
             for (int j = 12; j + 1 < data.length; j += 14) {
-                data[j] = (int) i;
-                data[j + 1] = (int) (i >> 32);
+                data[j] = (int)i;
+                data[j + 1] = (int)(i >> 32);
             }
         }
     }
 
     public static void endAddVertexData(WorldRenderer wrr) {
         SVertexBuilder svertexbuilder = wrr.sVertexBuilder;
-
         if (svertexbuilder.vertexSize == 14 && wrr.drawMode == 7 && wrr.vertexCount % 4 == 0) {
-            svertexbuilder.calcNormal(wrr, wrr.func_181664_j() - 4 * svertexbuilder.vertexSize);
+            svertexbuilder.calcNormal(wrr, wrr.getBufferSize() - 4 * svertexbuilder.vertexSize);
         }
     }
 
     public void calcNormal(WorldRenderer wrr, int baseIndex) {
         FloatBuffer floatbuffer = wrr.rawFloatBuffer;
         IntBuffer intbuffer = wrr.rawIntBuffer;
-        int i = wrr.func_181664_j();
+        int i = wrr.getBufferSize();
         float f = floatbuffer.get(baseIndex + 0 * this.vertexSize);
         float f1 = floatbuffer.get(baseIndex + 0 * this.vertexSize + 1);
         float f2 = floatbuffer.get(baseIndex + 0 * this.vertexSize + 2);
@@ -166,10 +162,10 @@ public class SVertexBuilder {
         float f31 = f22 * f23 - f25 * f20;
         float f32 = f20 * f24 - f23 * f21;
         float f33 = f30 * f30 + f31 * f31 + f32 * f32;
-        float f34 = (double) f33 != 0.0D ? (float) (1.0D / Math.sqrt((double) f33)) : 1.0F;
-        f30 = f30 * f34;
-        f31 = f31 * f34;
-        f32 = f32 * f34;
+        float f34 = f33 != 0.0 ? (float)(1.0 / Math.sqrt(f33)) : 1.0F;
+        f30 *= f34;
+        f31 *= f34;
+        f32 *= f34;
         f20 = f5 - f;
         f21 = f6 - f1;
         f22 = f7 - f2;
@@ -189,29 +185,29 @@ public class SVertexBuilder {
         float f41 = (f26 * f24 - f28 * f21) * f36;
         float f42 = (f26 * f25 - f28 * f22) * f36;
         f33 = f37 * f37 + f38 * f38 + f39 * f39;
-        f34 = (double) f33 != 0.0D ? (float) (1.0D / Math.sqrt((double) f33)) : 1.0F;
-        f37 = f37 * f34;
-        f38 = f38 * f34;
-        f39 = f39 * f34;
+        f34 = f33 != 0.0 ? (float)(1.0 / Math.sqrt(f33)) : 1.0F;
+        f37 *= f34;
+        f38 *= f34;
+        f39 *= f34;
         f33 = f40 * f40 + f41 * f41 + f42 * f42;
-        f34 = (double) f33 != 0.0D ? (float) (1.0D / Math.sqrt((double) f33)) : 1.0F;
-        f40 = f40 * f34;
-        f41 = f41 * f34;
-        f42 = f42 * f34;
+        f34 = f33 != 0.0 ? (float)(1.0 / Math.sqrt(f33)) : 1.0F;
+        f40 *= f34;
+        f41 *= f34;
+        f42 *= f34;
         float f43 = f32 * f38 - f31 * f39;
         float f44 = f30 * f39 - f32 * f37;
         float f45 = f31 * f37 - f30 * f38;
         float f46 = f40 * f43 + f41 * f44 + f42 * f45 < 0.0F ? -1.0F : 1.0F;
-        int j = (int) (f30 * 127.0F) & 255;
-        int k = (int) (f31 * 127.0F) & 255;
-        int l = (int) (f32 * 127.0F) & 255;
+        int j = (int)(f30 * 127.0F) & 0xFF;
+        int k = (int)(f31 * 127.0F) & 0xFF;
+        int l = (int)(f32 * 127.0F) & 0xFF;
         int i1 = (l << 16) + (k << 8) + j;
         intbuffer.put(baseIndex + 0 * this.vertexSize + this.offsetNormal, i1);
         intbuffer.put(baseIndex + 1 * this.vertexSize + this.offsetNormal, i1);
         intbuffer.put(baseIndex + 2 * this.vertexSize + this.offsetNormal, i1);
         intbuffer.put(baseIndex + 3 * this.vertexSize + this.offsetNormal, i1);
-        int j1 = ((int) (f37 * 32767.0F) & 65535) + (((int) (f38 * 32767.0F) & 65535) << 16);
-        int k1 = ((int) (f39 * 32767.0F) & 65535) + (((int) (f46 * 32767.0F) & 65535) << 16);
+        int j1 = ((int)(f37 * 32767.0F) & 65535) + (((int)(f38 * 32767.0F) & 65535) << 16);
+        int k1 = ((int)(f39 * 32767.0F) & 65535) + (((int)(f46 * 32767.0F) & 65535) << 16);
         intbuffer.put(baseIndex + 0 * this.vertexSize + 10, j1);
         intbuffer.put(baseIndex + 0 * this.vertexSize + 10 + 1, k1);
         intbuffer.put(baseIndex + 1 * this.vertexSize + 10, j1);
@@ -248,16 +244,15 @@ public class SVertexBuilder {
         if (count != 0) {
             VertexFormat vertexformat = wrr.getVertexFormat();
             int i = vertexformat.getNextOffset();
-
             if (i == 56) {
                 ByteBuffer bytebuffer = wrr.getByteBuffer();
-                bytebuffer.position(32);
+                ((Buffer)bytebuffer).position(32);
                 GL20.glVertexAttribPointer(Shaders.midTexCoordAttrib, 2, GL11.GL_FLOAT, false, i, bytebuffer);
-                bytebuffer.position(40);
+                ((Buffer)bytebuffer).position(40);
                 GL20.glVertexAttribPointer(Shaders.tangentAttrib, 4, GL11.GL_SHORT, false, i, bytebuffer);
-                bytebuffer.position(48);
+                ((Buffer)bytebuffer).position(48);
                 GL20.glVertexAttribPointer(Shaders.entityAttrib, 3, GL11.GL_SHORT, false, i, bytebuffer);
-                bytebuffer.position(0);
+                ((Buffer)bytebuffer).position(0);
                 GL20.glEnableVertexAttribArray(Shaders.midTexCoordAttrib);
                 GL20.glEnableVertexAttribArray(Shaders.tangentAttrib);
                 GL20.glEnableVertexAttribArray(Shaders.entityAttrib);

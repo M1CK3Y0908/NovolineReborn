@@ -197,8 +197,10 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
     public int displayHeight;
     public Timer timer = new Timer(20.0F);
     public WorldClient world;
+    public WorldClient theWorld;
     public RenderGlobal renderGlobal;
     public EntityPlayerSP player;
+    public EntityPlayerSP thePlayer;
     public Minecraft gameController;
     public BlockHelper blockHelper;
     public Entity pointedEntity;
@@ -417,6 +419,8 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
     /**
      * Return the singleton Minecraft instance for the game
      */
+    public static Minecraft getMinecraft() { return theMinecraft; }
+
     public static Minecraft getInstance() {
         return theMinecraft;
     }
@@ -2451,6 +2455,7 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
 
         mcSoundHandler.stopSounds();
         this.world = worldClientIn;
+        this.theWorld = worldClientIn;
 
         if (worldClientIn != null) {
             if (renderGlobal != null) {
@@ -2464,6 +2469,7 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
             if (player == null) {
                 this.player = playerController.func_178892_a(worldClientIn, new StatFileWriter());
                 playerController.flipPlayer(player);
+                this.thePlayer = this.player;
             }
 
             player.preparePlayerToSpawn();
@@ -2474,6 +2480,7 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
         } else {
             saveLoader.flushCache();
             this.player = null;
+            this.thePlayer = null;
         }
 
         this.systemTime = 0L;
@@ -2616,6 +2623,7 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
         this.renderViewEntity = null;
         EntityPlayerSP entityplayersp = player;
         this.player = playerController.func_178892_a(world, player == null ? new StatFileWriter() : player.getStatFileWriter());
+        this.thePlayer = this.player;
         player.getDataWatcher().updateWatchedObjectsFromList(entityplayersp.getDataWatcher().getAllWatched());
         player.dimension = dimension;
         this.renderViewEntity = player;
@@ -2623,6 +2631,7 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
         player.setClientBrand(s);
         world.spawnEntityInWorld(player);
         playerController.flipPlayer(player);
+                this.thePlayer = this.player;
         player.setMovementInput(new MovementInputFromOptions(gameSettings));
         player.setEntityId(i);
         playerController.setPlayerCapabilities(player);
@@ -2758,7 +2767,7 @@ public class Minecraft implements IThreadListener, IPlayerUsage {
         return itemRenderer;
     }
 
-    public int getDebugFPS() {
+    public static int getDebugFPS() {
         return Math.max(1, debugFPS);
     }
 

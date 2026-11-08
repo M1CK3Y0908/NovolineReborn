@@ -2,8 +2,8 @@ package net.shadersmod.client;
 
 public enum EnumShaderOption {
     ANTIALIASING("of.options.shaders.ANTIALIASING", "antialiasingLevel", "0"),
-    NORMAL_MAP("of.options.shaders.NORMAL_MAP", "normalMapEnabled", "false"),
-    SPECULAR_MAP("of.options.shaders.SPECULAR_MAP", "specularMapEnabled", "false"),
+    NORMAL_MAP("of.options.shaders.NORMAL_MAP", "normalMapEnabled", "true"),
+    SPECULAR_MAP("of.options.shaders.SPECULAR_MAP", "specularMapEnabled", "true"),
     RENDER_RES_MUL("of.options.shaders.RENDER_RES_MUL", "renderResMul", "1.0"),
     SHADOW_RES_MUL("of.options.shaders.SHADOW_RES_MUL", "shadowResMul", "1.0"),
     HAND_DEPTH_MUL("of.options.shaders.HAND_DEPTH_MUL", "handDepthMul", "0.125"),

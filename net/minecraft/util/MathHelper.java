@@ -9,6 +9,7 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class MathHelper {
+    public static double atan2(double y, double x) { return Math.atan2(y, x); }
 
     public static final float SQRT_2 = sqrt_float(2.0F);
     private static final int SIN_BITS = 12;

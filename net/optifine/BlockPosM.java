@@ -1,11 +1,10 @@
 package net.optifine;
 
 import com.google.common.collect.AbstractIterator;
+import java.util.Iterator;
 import net.minecraft.util.BlockPos;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.MathHelper;
-
-import java.util.Iterator;
 
 public class BlockPosM extends BlockPos {
     private int mx;
@@ -15,95 +14,83 @@ public class BlockPosM extends BlockPos {
     private BlockPosM[] facings;
     private boolean needsUpdate;
 
-    public BlockPosM(int p_i22_1_, int p_i22_2_, int p_i22_3_) {
-        this(p_i22_1_, p_i22_2_, p_i22_3_, 0);
+    public BlockPosM(int x, int y, int z) {
+        this(x, y, z, 0);
     }
 
-    public BlockPosM(double p_i23_1_, double p_i23_3_, double p_i23_5_) {
-        this(MathHelper.floor_double(p_i23_1_), MathHelper.floor_double(p_i23_3_), MathHelper.floor_double(p_i23_5_));
+    public BlockPosM(double xIn, double yIn, double zIn) {
+        this(MathHelper.floor_double(xIn), MathHelper.floor_double(yIn), MathHelper.floor_double(zIn));
     }
 
-    public BlockPosM(int p_i24_1_, int p_i24_2_, int p_i24_3_, int p_i24_4_) {
+    public BlockPosM(int x, int y, int z, int level) {
         super(0, 0, 0);
-        this.mx = p_i24_1_;
-        this.my = p_i24_2_;
-        this.mz = p_i24_3_;
-        this.level = p_i24_4_;
+        this.mx = x;
+        this.my = y;
+        this.mz = z;
+        this.level = level;
     }
 
-    /**
-     * Get the X coordinate
-     */
+    @Override
     public int getX() {
         return this.mx;
     }
 
-    /**
-     * Get the Y coordinate
-     */
+    @Override
     public int getY() {
         return this.my;
     }
 
-    /**
-     * Get the Z coordinate
-     */
+    @Override
     public int getZ() {
         return this.mz;
     }
 
-    public void setXyz(int p_setXyz_1_, int p_setXyz_2_, int p_setXyz_3_) {
-        this.mx = p_setXyz_1_;
-        this.my = p_setXyz_2_;
-        this.mz = p_setXyz_3_;
+    public void setXyz(int x, int y, int z) {
+        this.mx = x;
+        this.my = y;
+        this.mz = z;
         this.needsUpdate = true;
     }
 
-    public void setXyz(double p_setXyz_1_, double p_setXyz_3_, double p_setXyz_5_) {
-        this.setXyz(MathHelper.floor_double(p_setXyz_1_), MathHelper.floor_double(p_setXyz_3_), MathHelper.floor_double(p_setXyz_5_));
+    public void setXyz(double xIn, double yIn, double zIn) {
+        this.setXyz(MathHelper.floor_double(xIn), MathHelper.floor_double(yIn), MathHelper.floor_double(zIn));
     }
 
-    /**
-     * Offset this BlockPos 1 block in the given direction
-     */
+    @Override
     public BlockPos offset(EnumFacing facing) {
         if (this.level <= 0) {
             return super.offset(facing, 1);
-        } else {
-            if (this.facings == null) {
-                this.facings = new BlockPosM[EnumFacing.VALUES.length];
-            }
-
-            if (this.needsUpdate) {
-                this.update();
-            }
-
-            int i = facing.getIndex();
-            BlockPosM blockposm = this.facings[i];
-
-            if (blockposm == null) {
-                int j = this.mx + facing.getFrontOffsetX();
-                int k = this.my + facing.getFrontOffsetY();
-                int l = this.mz + facing.getFrontOffsetZ();
-                blockposm = new BlockPosM(j, k, l, this.level - 1);
-                this.facings[i] = blockposm;
-            }
-
-            return blockposm;
         }
+
+        if (this.facings == null) {
+            this.facings = new BlockPosM[EnumFacing.VALUES.length];
+        }
+
+        if (this.needsUpdate) {
+            this.update();
+        }
+
+        int i = facing.getIndex();
+        BlockPosM blockposm = this.facings[i];
+        if (blockposm == null) {
+            int j = this.mx + facing.getFrontOffsetX();
+            int k = this.my + facing.getFrontOffsetY();
+            int l = this.mz + facing.getFrontOffsetZ();
+            blockposm = new BlockPosM(j, k, l, this.level - 1);
+            this.facings[i] = blockposm;
+        }
+
+        return blockposm;
     }
 
-    /**
-     * Offsets this BlockPos n blocks in the given direction
-     */
+    @Override
     public BlockPos offset(EnumFacing facing, int n) {
         return n == 1 ? this.offset(facing) : super.offset(facing, n);
     }
 
     private void update() {
-        for (int i = 0; i < 6; ++i) {
+        for (int i = 0; i < 6; i++) {
             BlockPosM blockposm = this.facings[i];
-
             if (blockposm != null) {
                 EnumFacing enumfacing = EnumFacing.VALUES[i];
                 int j = this.mx + enumfacing.getFrontOffsetX();
@@ -116,10 +103,11 @@ public class BlockPosM extends BlockPos {
         this.needsUpdate = false;
     }
 
-    public static Iterable getAllInBoxMutable(BlockPos p_getAllInBoxMutable_0_, BlockPos p_getAllInBoxMutable_1_) {
-        final BlockPos blockpos = new BlockPos(Math.min(p_getAllInBoxMutable_0_.getX(), p_getAllInBoxMutable_1_.getX()), Math.min(p_getAllInBoxMutable_0_.getY(), p_getAllInBoxMutable_1_.getY()), Math.min(p_getAllInBoxMutable_0_.getZ(), p_getAllInBoxMutable_1_.getZ()));
-        final BlockPos blockpos1 = new BlockPos(Math.max(p_getAllInBoxMutable_0_.getX(), p_getAllInBoxMutable_1_.getX()), Math.max(p_getAllInBoxMutable_0_.getY(), p_getAllInBoxMutable_1_.getY()), Math.max(p_getAllInBoxMutable_0_.getZ(), p_getAllInBoxMutable_1_.getZ()));
+    public static Iterable getAllInBoxMutable(BlockPos from, BlockPos to) {
+        final BlockPos blockpos = new BlockPos(Math.min(from.getX(), to.getX()), Math.min(from.getY(), to.getY()), Math.min(from.getZ(), to.getZ()));
+        final BlockPos blockpos1 = new BlockPos(Math.max(from.getX(), to.getX()), Math.max(from.getY(), to.getY()), Math.max(from.getZ(), to.getZ()));
         return new Iterable() {
+            @Override
             public Iterator iterator() {
                 return new AbstractIterator() {
                     private BlockPosM theBlockPosM = null;
@@ -128,29 +116,31 @@ public class BlockPosM extends BlockPos {
                         if (this.theBlockPosM == null) {
                             this.theBlockPosM = new BlockPosM(blockpos.getX(), blockpos.getY(), blockpos.getZ(), 3);
                             return this.theBlockPosM;
-                        } else if (this.theBlockPosM.equals(blockpos1)) {
-                            return (BlockPosM) this.endOfData();
-                        } else {
-                            int i = this.theBlockPosM.getX();
-                            int j = this.theBlockPosM.getY();
-                            int k = this.theBlockPosM.getZ();
-
-                            if (i < blockpos1.getX()) {
-                                ++i;
-                            } else if (j < blockpos1.getY()) {
-                                i = blockpos.getX();
-                                ++j;
-                            } else if (k < blockpos1.getZ()) {
-                                i = blockpos.getX();
-                                j = blockpos.getY();
-                                ++k;
-                            }
-
-                            this.theBlockPosM.setXyz(i, j, k);
-                            return this.theBlockPosM;
                         }
+
+                        if (this.theBlockPosM.equals(blockpos1)) {
+                            return (BlockPosM)this.endOfData();
+                        }
+
+                        int i = this.theBlockPosM.getX();
+                        int j = this.theBlockPosM.getY();
+                        int k = this.theBlockPosM.getZ();
+                        if (i < blockpos1.getX()) {
+                            i++;
+                        } else if (j < blockpos1.getY()) {
+                            i = blockpos.getX();
+                            j++;
+                        } else if (k < blockpos1.getZ()) {
+                            i = blockpos.getX();
+                            j = blockpos.getY();
+                            k++;
+                        }
+
+                        this.theBlockPosM.setXyz(i, j, k);
+                        return this.theBlockPosM;
                     }
 
+                    @Override
                     protected Object computeNext() {
                         return this.computeNext0();
                     }

@@ -1,6 +1,7 @@
 package net.optifine;
 
 import java.awt.Dimension;
+import java.nio.Buffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -8,8 +9,7 @@ import net.minecraft.client.renderer.GLAllocation;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
 
-public class Mipmaps
-{
+public class Mipmaps {
     private final String iconName;
     private final int width;
     private final int height;
@@ -19,51 +19,39 @@ public class Mipmaps
     private IntBuffer[] mipmapBuffers;
     private Dimension[] mipmapDimensions;
 
-    public Mipmaps(String p_i66_1_, int p_i66_2_, int p_i66_3_, int[] p_i66_4_, boolean p_i66_5_)
-    {
-        this.iconName = p_i66_1_;
-        this.width = p_i66_2_;
-        this.height = p_i66_3_;
-        this.data = p_i66_4_;
-        this.direct = p_i66_5_;
-        this.mipmapDimensions = makeMipmapDimensions(p_i66_2_, p_i66_3_, p_i66_1_);
-        this.mipmapDatas = generateMipMapData(p_i66_4_, p_i66_2_, p_i66_3_, this.mipmapDimensions);
-
-        if (p_i66_5_)
-        {
+    public Mipmaps(String iconName, int width, int height, int[] data, boolean direct) {
+        this.iconName = iconName;
+        this.width = width;
+        this.height = height;
+        this.data = data;
+        this.direct = direct;
+        this.mipmapDimensions = makeMipmapDimensions(width, height, iconName);
+        this.mipmapDatas = generateMipMapData(data, width, height, this.mipmapDimensions);
+        if (direct) {
             this.mipmapBuffers = makeMipmapBuffers(this.mipmapDimensions, this.mipmapDatas);
         }
     }
 
-    public static Dimension[] makeMipmapDimensions(int p_makeMipmapDimensions_0_, int p_makeMipmapDimensions_1_, String p_makeMipmapDimensions_2_)
-    {
-        int i = TextureUtils.ceilPowerOfTwo(p_makeMipmapDimensions_0_);
-        int j = TextureUtils.ceilPowerOfTwo(p_makeMipmapDimensions_1_);
-
-        if (i == p_makeMipmapDimensions_0_ && j == p_makeMipmapDimensions_1_)
-        {
+    public static Dimension[] makeMipmapDimensions(int width, int height, String iconName) {
+        int i = TextureUtils.ceilPowerOfTwo(width);
+        int j = TextureUtils.ceilPowerOfTwo(height);
+        if (i == width && j == height) {
             List list = new ArrayList();
             int k = i;
             int l = j;
 
-            while (true)
-            {
+            while (true) {
                 k /= 2;
                 l /= 2;
-
-                if (k <= 0 && l <= 0)
-                {
-                    Dimension[] adimension = (Dimension[])((Dimension[])list.toArray(new Dimension[list.size()]));
-                    return adimension;
+                if (k <= 0 && l <= 0) {
+                    return ((Dimension[]) list.toArray(new Dimension[list.size()]));
                 }
 
-                if (k <= 0)
-                {
+                if (k <= 0) {
                     k = 1;
                 }
 
-                if (l <= 0)
-                {
+                if (l <= 0) {
                     l = 1;
                 }
 
@@ -71,36 +59,28 @@ public class Mipmaps
                 Dimension dimension = new Dimension(k, l);
                 list.add(dimension);
             }
-        }
-        else
-        {
-            Config.warn("Mipmaps not possible (power of 2 dimensions needed), texture: " + p_makeMipmapDimensions_2_ + ", dim: " + p_makeMipmapDimensions_0_ + "x" + p_makeMipmapDimensions_1_);
+        } else {
+            Config.warn("Mipmaps not possible (power of 2 dimensions needed), texture: " + iconName + ", dim: " + width + "x" + height);
             return new Dimension[0];
         }
     }
 
-    public static int[][] generateMipMapData(int[] p_generateMipMapData_0_, int p_generateMipMapData_1_, int p_generateMipMapData_2_, Dimension[] p_generateMipMapData_3_)
-    {
-        int[] aint = p_generateMipMapData_0_;
-        int i = p_generateMipMapData_1_;
+    public static int[][] generateMipMapData(int[] data, int width, int height, Dimension[] mipmapDimensions) {
+        int[] aint = data;
+        int i = width;
         boolean flag = true;
-        int[][] aint1 = new int[p_generateMipMapData_3_.length][];
+        int[][] aint1 = new int[mipmapDimensions.length][];
 
-        for (int j = 0; j < p_generateMipMapData_3_.length; ++j)
-        {
-            Dimension dimension = p_generateMipMapData_3_[j];
+        for (int j = 0; j < mipmapDimensions.length; j++) {
+            Dimension dimension = mipmapDimensions[j];
             int k = dimension.width;
             int l = dimension.height;
             int[] aint2 = new int[k * l];
             aint1[j] = aint2;
             int i1 = j + 1;
-
-            if (flag)
-            {
-                for (int j1 = 0; j1 < k; ++j1)
-                {
-                    for (int k1 = 0; k1 < l; ++k1)
-                    {
+            if (flag) {
+                for (int j1 = 0; j1 < k; j1++) {
+                    for (int k1 = 0; k1 < l; k1++) {
                         int l1 = aint[j1 * 2 + 0 + (k1 * 2 + 0) * i];
                         int i2 = aint[j1 * 2 + 1 + (k1 * 2 + 0) * i];
                         int j2 = aint[j1 * 2 + 1 + (k1 * 2 + 1) * i];
@@ -113,9 +93,7 @@ public class Mipmaps
 
             aint = aint2;
             i = k;
-
-            if (k <= 1 || l <= 1)
-            {
+            if (k <= 1 || l <= 1) {
                 flag = false;
             }
         }
@@ -123,96 +101,79 @@ public class Mipmaps
         return aint1;
     }
 
-    public static int alphaBlend(int p_alphaBlend_0_, int p_alphaBlend_1_, int p_alphaBlend_2_, int p_alphaBlend_3_)
-    {
-        int i = alphaBlend(p_alphaBlend_0_, p_alphaBlend_1_);
-        int j = alphaBlend(p_alphaBlend_2_, p_alphaBlend_3_);
-        int k = alphaBlend(i, j);
-        return k;
+    public static int alphaBlend(int c1, int c2, int c3, int c4) {
+        int i = alphaBlend(c1, c2);
+        int j = alphaBlend(c3, c4);
+        return alphaBlend(i, j);
     }
 
-    private static int alphaBlend(int p_alphaBlend_0_, int p_alphaBlend_1_)
-    {
-        int i = (p_alphaBlend_0_ & -16777216) >> 24 & 255;
-        int j = (p_alphaBlend_1_ & -16777216) >> 24 & 255;
+    private static int alphaBlend(int c1, int c2) {
+        int i = (c1 & 0xFF000000) >> 24 & 0xFF;
+        int j = (c2 & 0xFF000000) >> 24 & 0xFF;
         int k = (i + j) / 2;
-
-        if (i == 0 && j == 0)
-        {
+        if (i == 0 && j == 0) {
             i = 1;
             j = 1;
-        }
-        else
-        {
-            if (i == 0)
-            {
-                p_alphaBlend_0_ = p_alphaBlend_1_;
+        } else {
+            if (i == 0) {
+                c1 = c2;
                 k /= 2;
             }
 
-            if (j == 0)
-            {
-                p_alphaBlend_1_ = p_alphaBlend_0_;
+            if (j == 0) {
+                c2 = c1;
                 k /= 2;
             }
         }
 
-        int l = (p_alphaBlend_0_ >> 16 & 255) * i;
-        int i1 = (p_alphaBlend_0_ >> 8 & 255) * i;
-        int j1 = (p_alphaBlend_0_ & 255) * i;
-        int k1 = (p_alphaBlend_1_ >> 16 & 255) * j;
-        int l1 = (p_alphaBlend_1_ >> 8 & 255) * j;
-        int i2 = (p_alphaBlend_1_ & 255) * j;
+        int l = (c1 >> 16 & 0xFF) * i;
+        int i1 = (c1 >> 8 & 0xFF) * i;
+        int j1 = (c1 & 0xFF) * i;
+        int k1 = (c2 >> 16 & 0xFF) * j;
+        int l1 = (c2 >> 8 & 0xFF) * j;
+        int i2 = (c2 & 0xFF) * j;
         int j2 = (l + k1) / (i + j);
         int k2 = (i1 + l1) / (i + j);
         int l2 = (j1 + i2) / (i + j);
         return k << 24 | j2 << 16 | k2 << 8 | l2;
     }
 
-    private int averageColor(int p_averageColor_1_, int p_averageColor_2_)
-    {
-        int i = (p_averageColor_1_ & -16777216) >> 24 & 255;
-        int j = (p_averageColor_2_ & -16777216) >> 24 & 255;
-        return (i + j >> 1 << 24) + ((p_averageColor_1_ & 16711422) + (p_averageColor_2_ & 16711422) >> 1);
+    private int averageColor(int i, int j) {
+        int ix = (i & 0xFF000000) >> 24 & 0xFF;
+        int jx = (j & 0xFF000000) >> 24 & 0xFF;
+        return (ix + jx >> 1 << 24) + ((i & 16711422) + (j & 16711422) >> 1);
     }
 
-    public static IntBuffer[] makeMipmapBuffers(Dimension[] p_makeMipmapBuffers_0_, int[][] p_makeMipmapBuffers_1_)
-    {
-        if (p_makeMipmapBuffers_0_ == null)
-        {
+    public static IntBuffer[] makeMipmapBuffers(Dimension[] mipmapDimensions, int[][] mipmapDatas) {
+        if (mipmapDimensions == null) {
             return null;
         }
-        else
-        {
-            IntBuffer[] aintbuffer = new IntBuffer[p_makeMipmapBuffers_0_.length];
 
-            for (int i = 0; i < p_makeMipmapBuffers_0_.length; ++i)
-            {
-                Dimension dimension = p_makeMipmapBuffers_0_[i];
-                int j = dimension.width * dimension.height;
-                IntBuffer intbuffer = GLAllocation.createDirectIntBuffer(j);
-                int[] aint = p_makeMipmapBuffers_1_[i];
-                intbuffer.clear();
-                intbuffer.put(aint);
-                intbuffer.clear();
-                aintbuffer[i] = intbuffer;
-            }
+        IntBuffer[] aintbuffer = new IntBuffer[mipmapDimensions.length];
 
-            return aintbuffer;
+        for (int i = 0; i < mipmapDimensions.length; i++) {
+            Dimension dimension = mipmapDimensions[i];
+            int j = dimension.width * dimension.height;
+            IntBuffer intbuffer = GLAllocation.createDirectIntBuffer(j);
+            int[] aint = mipmapDatas[i];
+            ((Buffer)intbuffer).clear();
+            intbuffer.put(aint);
+            ((Buffer)intbuffer).clear();
+            aintbuffer[i] = intbuffer;
         }
+
+        return aintbuffer;
     }
 
-    public static void allocateMipmapTextures(int p_allocateMipmapTextures_0_, int p_allocateMipmapTextures_1_, String p_allocateMipmapTextures_2_)
-    {
-        Dimension[] adimension = makeMipmapDimensions(p_allocateMipmapTextures_0_, p_allocateMipmapTextures_1_, p_allocateMipmapTextures_2_);
+    public static void allocateMipmapTextures(int width, int height, String name) {
+        Dimension[] adimension = makeMipmapDimensions(width, height, name);
 
-        for (int i = 0; i < adimension.length; ++i)
-        {
+        for (int i = 0; i < adimension.length; i++) {
             Dimension dimension = adimension[i];
             int j = dimension.width;
             int k = dimension.height;
             int l = i + 1;
-            GL11.glTexImage2D(GL11.GL_TEXTURE_2D, l, GL11.GL_RGBA, j, k, 0, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, (IntBuffer)((IntBuffer)null));
+            GL11.glTexImage2D(GL11.GL_TEXTURE_2D, l, GL11.GL_RGBA, j, k, 0, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, (IntBuffer)null);
         }
     }
 }

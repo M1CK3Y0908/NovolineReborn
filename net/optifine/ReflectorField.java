@@ -2,78 +2,69 @@ package net.optifine;
 
 import java.lang.reflect.Field;
 
-public class ReflectorField
-{
-    private IFieldLocator fieldLocator;
-    private boolean checked;
-    private Field targetField;
+public class ReflectorField {
+    private IFieldLocator fieldLocator = null;
+    private boolean checked = false;
+    private Field targetField = null;
 
-    public ReflectorField(ReflectorClass p_i85_1_, String p_i85_2_)
-    {
-        this((IFieldLocator)(new FieldLocatorName(p_i85_1_, p_i85_2_)));
+    public ReflectorField(ReflectorClass reflectorClass, String targetFieldName) {
+        this(new FieldLocatorName(reflectorClass, targetFieldName));
     }
 
-    public ReflectorField(ReflectorClass p_i86_1_, Class p_i86_2_)
-    {
-        this(p_i86_1_, p_i86_2_, 0);
+    public ReflectorField(ReflectorClass reflectorClass, String targetFieldName, boolean lazyResolve) {
+        this(new FieldLocatorName(reflectorClass, targetFieldName), lazyResolve);
     }
 
-    public ReflectorField(ReflectorClass p_i87_1_, Class p_i87_2_, int p_i87_3_)
-    {
-        this((IFieldLocator)(new FieldLocatorType(p_i87_1_, p_i87_2_, p_i87_3_)));
+    public ReflectorField(ReflectorClass reflectorClass, Class targetFieldType) {
+        this(reflectorClass, targetFieldType, 0);
     }
 
-    public ReflectorField(Field p_i88_1_)
-    {
-        this((IFieldLocator)(new FieldLocatorFixed(p_i88_1_)));
+    public ReflectorField(ReflectorClass reflectorClass, Class targetFieldType, int targetFieldIndex) {
+        this(new FieldLocatorType(reflectorClass, targetFieldType, targetFieldIndex));
     }
 
-    public ReflectorField(IFieldLocator p_i89_1_)
-    {
-        this.fieldLocator = null;
-        this.checked = false;
-        this.targetField = null;
-        this.fieldLocator = p_i89_1_;
-        this.getTargetField();
+    public ReflectorField(Field field) {
+        this(new FieldLocatorFixed(field));
     }
 
-    public Field getTargetField()
-    {
-        if (this.checked)
-        {
-            return this.targetField;
-        }
-        else
-        {
-            this.checked = true;
-            this.targetField = this.fieldLocator.getField();
+    public ReflectorField(IFieldLocator fieldLocator) {
+        this(fieldLocator, false);
+    }
 
-            if (this.targetField != null)
-            {
-                this.targetField.setAccessible(true);
-            }
-
-            return this.targetField;
+    public ReflectorField(IFieldLocator fieldLocator, boolean lazyResolve) {
+        this.fieldLocator = fieldLocator;
+        if (!lazyResolve) {
+            this.getTargetField();
         }
     }
 
-    public Object getValue()
-    {
-        return Reflector.getFieldValue((Object)null, this);
+    public Field getTargetField() {
+        if (this.checked) {
+            return this.targetField;
+        }
+
+        this.checked = true;
+        this.targetField = this.fieldLocator.getField();
+        if (this.targetField != null) {
+            this.targetField.setAccessible(true);
+        }
+
+        return this.targetField;
     }
 
-    public void setValue(Object p_setValue_1_)
-    {
-        Reflector.setFieldValue((Object)null, this, p_setValue_1_);
+    public Object getValue() {
+        return Reflector.getFieldValue(null, this);
     }
 
-    public void setValue(Object p_setValue_1_, Object p_setValue_2_)
-    {
-        Reflector.setFieldValue(p_setValue_1_, this, p_setValue_2_);
+    public void setValue(Object value) {
+        Reflector.setFieldValue(null, this, value);
     }
 
-    public boolean exists()
-    {
+    public void setValue(Object obj, Object value) {
+        Reflector.setFieldValue(obj, this, value);
+    }
+
+    public boolean exists() {
         return this.getTargetField() != null;
     }
 }

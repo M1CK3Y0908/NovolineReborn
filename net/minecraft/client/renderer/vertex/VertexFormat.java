@@ -50,6 +50,8 @@ public class VertexFormat {
     }
 
     @SuppressWarnings("incomplete-switch")
+    public VertexFormat addElement(VertexFormatElement element) { return this.func_181721_a(element); }
+
     public VertexFormat func_181721_a(VertexFormatElement p_181721_1_) {
         if (p_181721_1_.isPositionElement() && this.hasPosition()) {
             LOGGER.warn("VertexFormat error: Trying to add a position VertexFormatElement when one already exists, ignoring.");

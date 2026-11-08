@@ -2,18 +2,17 @@ package net.optifine;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
-import net.minecraft.client.resources.I18n;
-import net.minecraft.client.resources.IResourcePack;
-import net.minecraft.util.ResourceLocation;
-import org.apache.commons.io.Charsets;
-import org.apache.commons.io.IOUtils;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import net.minecraft.client.resources.I18n;
+import net.minecraft.client.resources.IResourcePack;
+import net.minecraft.util.ResourceLocation;
+import org.apache.commons.io.Charsets;
+import org.apache.commons.io.IOUtils;
 
 public class Lang {
     private static final Splitter splitter = Splitter.on('=').limit(2);
@@ -21,12 +20,11 @@ public class Lang {
 
     public static void resourcesReloaded() {
         Map map = I18n.getLocaleProperties();
-        List<String> list = new ArrayList();
+        List<String> list = new ArrayList<>();
         String s = "optifine/lang/";
         String s1 = "en_US";
         String s2 = ".lang";
         list.add(s + s1 + s2);
-
         if (!Config.getGameSettings().language.equals(s1)) {
             list.add(s + Config.getGameSettings().language + s2);
         }
@@ -35,23 +33,21 @@ public class Lang {
         loadResources(Config.getDefaultResourcePack(), astring, map);
         IResourcePack[] airesourcepack = Config.getResourcePacks();
 
-        for (int i = 0; i < airesourcepack.length; ++i) {
+        for (int i = 0; i < airesourcepack.length; i++) {
             IResourcePack iresourcepack = airesourcepack[i];
             loadResources(iresourcepack, astring, map);
         }
     }
 
-    private static void loadResources(IResourcePack p_loadResources_0_, String[] p_loadResources_1_, Map p_loadResources_2_) {
+    private static void loadResources(IResourcePack rp, String[] files, Map localeProperties) {
         try {
-            for (int i = 0; i < p_loadResources_1_.length; ++i) {
-                String s = p_loadResources_1_[i];
+            for (int i = 0; i < files.length; i++) {
+                String s = files[i];
                 ResourceLocation resourcelocation = new ResourceLocation(s);
-
-                if (p_loadResources_0_.resourceExists(resourcelocation)) {
-                    InputStream inputstream = p_loadResources_0_.getInputStream(resourcelocation);
-
+                if (rp.resourceExists(resourcelocation)) {
+                    InputStream inputstream = rp.getInputStream(resourcelocation);
                     if (inputstream != null) {
-                        loadLocaleData(inputstream, p_loadResources_2_);
+                        loadLocaleData(inputstream, localeProperties);
                     }
                 }
             }
@@ -60,27 +56,26 @@ public class Lang {
         }
     }
 
-    public static void loadLocaleData(InputStream p_loadLocaleData_0_, Map p_loadLocaleData_1_) throws IOException {
-        for (String s : IOUtils.readLines(p_loadLocaleData_0_, Charsets.UTF_8)) {
-            if (!s.isEmpty() && s.charAt(0) != 35) {
+    public static void loadLocaleData(InputStream is, Map localeProperties) throws IOException {
+        for (String s : IOUtils.readLines(is, Charsets.UTF_8)) {
+            if (!s.isEmpty() && s.charAt(0) != '#') {
                 String[] astring = Iterables.toArray(splitter.split(s), String.class);
-
                 if (astring != null && astring.length == 2) {
                     String s1 = astring[0];
                     String s2 = pattern.matcher(astring[1]).replaceAll("%$1s");
-                    p_loadLocaleData_1_.put(s1, s2);
+                    localeProperties.put(s1, s2);
                 }
             }
         }
     }
 
-    public static String get(String p_get_0_) {
-        return I18n.format(p_get_0_);
+    public static String get(String key) {
+        return I18n.format(key);
     }
 
-    public static String get(String p_get_0_, String p_get_1_) {
-        String s = I18n.format(p_get_0_);
-        return s != null && !s.equals(p_get_0_) ? s : p_get_1_;
+    public static String get(String key, String def) {
+        String s = I18n.format(key);
+        return s != null && !s.equals(key) ? s : def;
     }
 
     public static String getOn() {

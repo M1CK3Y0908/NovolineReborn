@@ -1,11 +1,10 @@
 package net.shadersmod.client;
 
+import java.util.Iterator;
 import net.minecraft.client.renderer.ViewFrustum;
 import net.minecraft.client.renderer.chunk.RenderChunk;
 import net.minecraft.util.BlockPos;
 import net.optifine.BlockPosM;
-
-import java.util.Iterator;
 
 public class IteratorRenderChunks implements Iterator<RenderChunk> {
     private ViewFrustum viewFrustum;
@@ -17,6 +16,7 @@ public class IteratorRenderChunks implements Iterator<RenderChunk> {
         this.Iterator3d = new Iterator3d(posStart, posEnd, width, height);
     }
 
+    @Override
     public boolean hasNext() {
         return this.Iterator3d.hasNext();
     }
@@ -24,10 +24,10 @@ public class IteratorRenderChunks implements Iterator<RenderChunk> {
     public RenderChunk next() {
         BlockPos blockpos = this.Iterator3d.next();
         this.posBlock.setXyz(blockpos.getX() << 4, blockpos.getY() << 4, blockpos.getZ() << 4);
-        RenderChunk renderchunk = this.viewFrustum.getRenderChunk(this.posBlock);
-        return renderchunk;
+        return this.viewFrustum.getRenderChunk(this.posBlock);
     }
 
+    @Override
     public void remove() {
         throw new RuntimeException("Not implemented");
     }

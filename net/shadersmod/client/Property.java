@@ -1,9 +1,8 @@
 package net.shadersmod.client;
 
+import java.util.Properties;
 import net.optifine.Config;
 import org.apache.commons.lang3.ArrayUtils;
-
-import java.util.Properties;
 
 public class Property {
     private int[] values = null;
@@ -20,10 +19,11 @@ public class Property {
         this.userName = userName;
         this.userValues = userValues;
         this.defaultValue = defaultValue;
-
         if (propertyValues.length != userValues.length) {
             throw new IllegalArgumentException("Property and user values have different lengths: " + propertyValues.length + " != " + userValues.length);
-        } else if (defaultValue >= 0 && defaultValue < propertyValues.length) {
+        }
+
+        if (defaultValue >= 0 && defaultValue < propertyValues.length) {
             this.value = defaultValue;
         } else {
             throw new IllegalArgumentException("Invalid default value: " + defaultValue);
@@ -34,21 +34,19 @@ public class Property {
         if (propVal == null) {
             this.value = this.defaultValue;
             return false;
-        } else {
-            this.value = ArrayUtils.indexOf(this.propertyValues, propVal);
-
-            if (this.value >= 0 && this.value < this.propertyValues.length) {
-                return true;
-            } else {
-                this.value = this.defaultValue;
-                return false;
-            }
         }
+
+        this.value = ArrayUtils.indexOf(this.propertyValues, propVal);
+        if (this.value >= 0 && this.value < this.propertyValues.length) {
+            return true;
+        }
+
+        this.value = this.defaultValue;
+        return false;
     }
 
     public void nextValue() {
-        ++this.value;
-
+        this.value++;
         if (this.value < 0 || this.value >= this.propertyValues.length) {
             this.value = 0;
         }
@@ -56,7 +54,6 @@ public class Property {
 
     public void setValue(int val) {
         this.value = val;
-
         if (this.value < 0 || this.value >= this.propertyValues.length) {
             this.value = this.defaultValue;
         }
@@ -88,13 +85,12 @@ public class Property {
 
     public boolean loadFrom(Properties props) {
         this.resetValue();
-
         if (props == null) {
             return false;
-        } else {
-            String s = props.getProperty(this.propertyName);
-            return s != null && this.setPropertyValue(s);
         }
+
+        String s = props.getProperty(this.propertyName);
+        return s == null ? false : this.setPropertyValue(s);
     }
 
     public void saveTo(Properties props) {
@@ -103,7 +99,8 @@ public class Property {
         }
     }
 
+    @Override
     public String toString() {
-        return "" + this.propertyName + "=" + this.getPropertyValue() + " [" + Config.arrayToString((Object[]) this.propertyValues) + "], value: " + this.value;
+        return "" + this.propertyName + "=" + this.getPropertyValue() + " [" + Config.arrayToString(this.propertyValues) + "], value: " + this.value;
     }
 }

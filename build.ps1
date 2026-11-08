@@ -11,7 +11,7 @@ Write-Host "1. Recompiling modified sources"
 Write-Host "=========================================="
 
 $cp = "$OutClassesDir;$ProjectRoot\libs\*"
-javac -cp $cp -d $OutClassesDir cc\novoline\modules\visual\HUD.java net\Main.java Start.java
+javac -encoding UTF-8 -cp $cp -d $OutClassesDir cc\novoline\modules\AbstractModule.java cc\novoline\modules\visual\HUD.java cc\novoline\modules\visual\Watermark.java cc\novoline\modules\visual\Information.java cc\novoline\modules\visual\ArmorHUD.java cc\novoline\modules\visual\PotionHUD.java cc\novoline\modules\visual\TargetList.java cc\novoline\modules\visual\InventoryHUD.java cc\novoline\Initializer.java net\minecraft\client\gui\GuiChat.java net\Main.java Start.java
 
 if ($LASTEXITCODE -ne 0) {
     throw "Compilation failed!"

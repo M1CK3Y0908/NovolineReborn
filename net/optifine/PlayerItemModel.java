@@ -11,8 +11,7 @@ import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.util.ResourceLocation;
 
-public class PlayerItemModel
-{
+public class PlayerItemModel {
     private Dimension textureSize = null;
     private boolean usePlayerTexture = false;
     private PlayerItemRenderer[] modelRenderers = new PlayerItemRenderer[0];
@@ -28,105 +27,79 @@ public class PlayerItemModel
     public static final int ATTACH_RIGHT_LEG = 5;
     public static final int ATTACH_CAPE = 6;
 
-    public PlayerItemModel(Dimension p_i74_1_, boolean p_i74_2_, PlayerItemRenderer[] p_i74_3_)
-    {
-        this.textureSize = p_i74_1_;
-        this.usePlayerTexture = p_i74_2_;
-        this.modelRenderers = p_i74_3_;
+    public PlayerItemModel(Dimension textureSize, boolean usePlayerTexture, PlayerItemRenderer[] modelRenderers) {
+        this.textureSize = textureSize;
+        this.usePlayerTexture = usePlayerTexture;
+        this.modelRenderers = modelRenderers;
     }
 
-    public void render(ModelBiped p_render_1_, AbstractClientPlayer p_render_2_, float p_render_3_, float p_render_4_)
-    {
+    public void render(ModelBiped modelBiped, AbstractClientPlayer player, float scale, float partialTicks) {
         TextureManager texturemanager = Config.getTextureManager();
-
-        if (this.usePlayerTexture)
-        {
-            texturemanager.bindTexture(p_render_2_.getLocationSkin());
-        }
-        else if (this.textureLocation != null)
-        {
-            if (this.texture == null && this.textureImage != null)
-            {
+        if (this.usePlayerTexture) {
+            texturemanager.bindTexture(player.getLocationSkin());
+        } else if (this.textureLocation != null) {
+            if (this.texture == null && this.textureImage != null) {
                 this.texture = new DynamicTexture(this.textureImage);
-                Minecraft.getInstance().getTextureManager().loadTexture(this.textureLocation, this.texture);
+                Minecraft.getMinecraft().getTextureManager().loadTexture(this.textureLocation, this.texture);
             }
 
             texturemanager.bindTexture(this.textureLocation);
-        }
-        else
-        {
+        } else {
             texturemanager.bindTexture(this.locationMissing);
         }
 
-        for (int i = 0; i < this.modelRenderers.length; ++i)
-        {
+        for (int i = 0; i < this.modelRenderers.length; i++) {
             PlayerItemRenderer playeritemrenderer = this.modelRenderers[i];
             GlStateManager.pushMatrix();
-
-            if (p_render_2_.isSneaking())
-            {
+            if (player.isSneaking()) {
                 GlStateManager.translate(0.0F, 0.2F, 0.0F);
             }
 
-            playeritemrenderer.render(p_render_1_, p_render_3_);
+            playeritemrenderer.render(modelBiped, scale);
             GlStateManager.popMatrix();
         }
     }
 
-    public static ModelRenderer getAttachModel(ModelBiped p_getAttachModel_0_, int p_getAttachModel_1_)
-    {
-        switch (p_getAttachModel_1_)
-        {
+    public static ModelRenderer getAttachModel(ModelBiped modelBiped, int attachTo) {
+        switch (attachTo) {
             case 0:
-                return p_getAttachModel_0_.bipedBody;
-
+                return modelBiped.bipedBody;
             case 1:
-                return p_getAttachModel_0_.bipedHead;
-
+                return modelBiped.bipedHead;
             case 2:
-                return p_getAttachModel_0_.bipedLeftArm;
-
+                return modelBiped.bipedLeftArm;
             case 3:
-                return p_getAttachModel_0_.bipedRightArm;
-
+                return modelBiped.bipedRightArm;
             case 4:
-                return p_getAttachModel_0_.bipedLeftLeg;
-
+                return modelBiped.bipedLeftLeg;
             case 5:
-                return p_getAttachModel_0_.bipedRightLeg;
-
+                return modelBiped.bipedRightLeg;
             default:
                 return null;
         }
     }
 
-    public BufferedImage getTextureImage()
-    {
+    public BufferedImage getTextureImage() {
         return this.textureImage;
     }
 
-    public void setTextureImage(BufferedImage p_setTextureImage_1_)
-    {
-        this.textureImage = p_setTextureImage_1_;
+    public void setTextureImage(BufferedImage textureImage) {
+        this.textureImage = textureImage;
     }
 
-    public DynamicTexture getTexture()
-    {
+    public DynamicTexture getTexture() {
         return this.texture;
     }
 
-    public ResourceLocation getTextureLocation()
-    {
+    public ResourceLocation getTextureLocation() {
         return this.textureLocation;
     }
 
-    public void setTextureLocation(ResourceLocation p_setTextureLocation_1_)
-    {
-        this.textureLocation = p_setTextureLocation_1_;
+    public void setTextureLocation(ResourceLocation textureLocation) {
+        this.textureLocation = textureLocation;
     }
 
-    public boolean isUsePlayerTexture()
-    {
+    public boolean isUsePlayerTexture() {
         return this.usePlayerTexture;
     }
 }

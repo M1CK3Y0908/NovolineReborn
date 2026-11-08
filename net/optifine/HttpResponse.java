@@ -3,43 +3,36 @@ package net.optifine;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class HttpResponse
-{
+public class HttpResponse {
     private int status = 0;
     private String statusLine = null;
-    private Map<String, String> headers = new LinkedHashMap();
+    private Map<String, String> headers = new LinkedHashMap<>();
     private byte[] body = null;
 
-    public HttpResponse(int p_i61_1_, String p_i61_2_, Map p_i61_3_, byte[] p_i61_4_)
-    {
-        this.status = p_i61_1_;
-        this.statusLine = p_i61_2_;
-        this.headers = p_i61_3_;
-        this.body = p_i61_4_;
+    public HttpResponse(int status, String statusLine, Map headers, byte[] body) {
+        this.status = status;
+        this.statusLine = statusLine;
+        this.headers = headers;
+        this.body = body;
     }
 
-    public int getStatus()
-    {
+    public int getStatus() {
         return this.status;
     }
 
-    public String getStatusLine()
-    {
+    public String getStatusLine() {
         return this.statusLine;
     }
 
-    public Map getHeaders()
-    {
+    public Map getHeaders() {
         return this.headers;
     }
 
-    public String getHeader(String p_getHeader_1_)
-    {
-        return (String)this.headers.get(p_getHeader_1_);
+    public String getHeader(String key) {
+        return this.headers.get(key);
     }
 
-    public byte[] getBody()
-    {
+    public byte[] getBody() {
         return this.body;
     }
 }

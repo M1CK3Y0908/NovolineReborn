@@ -1,10 +1,9 @@
 package net.shadersmod.client;
 
-import net.optifine.Config;
-import net.optifine.StrUtils;
-
 import java.util.Arrays;
 import java.util.List;
+import net.optifine.Config;
+import net.optifine.StrUtils;
 
 public abstract class ShaderOption {
     private String name = null;
@@ -25,7 +24,6 @@ public abstract class ShaderOption {
         this.value = value;
         this.values = values;
         this.valueDefault = valueDefault;
-
         if (path != null) {
             this.paths = new String[]{path};
         }
@@ -42,8 +40,7 @@ public abstract class ShaderOption {
     public String getDescriptionText() {
         String s = Config.normalize(this.description);
         s = StrUtils.removePrefix(s, "//");
-        s = Shaders.translate("option." + this.getName() + ".comment", s);
-        return s;
+        return Shaders.translate("option." + this.getName() + ".comment", s);
     }
 
     public void setDescription(String description) {
@@ -56,13 +53,12 @@ public abstract class ShaderOption {
 
     public boolean setValue(String value) {
         int i = getIndex(value, this.values);
-
         if (i < 0) {
             return false;
-        } else {
-            this.value = value;
-            return true;
         }
+
+        this.value = value;
+        return true;
     }
 
     public String getValueDefault() {
@@ -75,7 +71,6 @@ public abstract class ShaderOption {
 
     public void nextValue() {
         int i = getIndex(this.value, this.values);
-
         if (i >= 0) {
             i = (i + 1) % this.values.length;
             this.value = this.values[i];
@@ -84,7 +79,6 @@ public abstract class ShaderOption {
 
     public void prevValue() {
         int i = getIndex(this.value, this.values);
-
         if (i >= 0) {
             i = (i - 1 + this.values.length) % this.values.length;
             this.value = this.values[i];
@@ -92,9 +86,8 @@ public abstract class ShaderOption {
     }
 
     private static int getIndex(String str, String[] strs) {
-        for (int i = 0; i < strs.length; ++i) {
+        for (int i = 0; i < strs.length; i++) {
             String s = strs[i];
-
             if (s.equals(str)) {
                 return i;
             }
@@ -108,11 +101,12 @@ public abstract class ShaderOption {
     }
 
     public void addPaths(String[] newPaths) {
-        List<String> list = Arrays.<String>asList(this.paths);
+        List<String> list = Arrays.asList(this.paths);
 
-        for (String s : newPaths) {
+        for (int i = 0; i < newPaths.length; i++) {
+            String s = newPaths[i];
             if (!list.contains(s)) {
-                this.paths = (String[]) (String[]) Config.addObjectToArray(this.paths, s);
+                this.paths = (String[])Config.addObjectToArray(this.paths, s);
             }
         }
     }
@@ -170,10 +164,28 @@ public abstract class ShaderOption {
     }
 
     public String[] getValues() {
-        return (String[]) this.values.clone();
+        return (String[])this.values.clone();
     }
 
+    public float getIndexNormalized() {
+        if (this.values.length <= 1) {
+            return 0.0F;
+        }
+
+        int i = getIndex(this.value, this.values);
+        return i < 0 ? 0.0F : 1.0F * i / (this.values.length - 1.0F);
+    }
+
+    public void setIndexNormalized(float f) {
+        if (this.values.length > 1) {
+            f = Config.limit(f, 0.0F, 1.0F);
+            int i = Math.round(f * (this.values.length - 1));
+            this.value = this.values[i];
+        }
+    }
+
+    @Override
     public String toString() {
-        return "" + this.name + ", value: " + this.value + ", valueDefault: " + this.valueDefault + ", paths: " + Config.arrayToString((Object[]) this.paths);
+        return "" + this.name + ", value: " + this.value + ", valueDefault: " + this.valueDefault + ", paths: " + Config.arrayToString(this.paths);
     }
 }

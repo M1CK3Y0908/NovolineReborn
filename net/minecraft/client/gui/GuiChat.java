@@ -3,7 +3,9 @@ package net.minecraft.client.gui;
 import cc.novoline.Novoline;
 import cc.novoline.modules.combat.KillAura;
 import cc.novoline.modules.visual.HUD;
+import cc.novoline.modules.visual.InventoryHUD;
 import cc.novoline.modules.visual.Radar;
+import cc.novoline.modules.visual.TargetList;
 import cc.novoline.utils.RenderUtils;
 import cc.novoline.utils.ScaleUtils;
 import com.google.common.collect.Lists;
@@ -162,12 +164,14 @@ public class GuiChat extends GuiScreen {
 
             HUD hud = Novoline.getInstance().getModuleManager().getModule(HUD.class);
             Radar radar = Novoline.getInstance().getModuleManager().getModule(Radar.class);
+            InventoryHUD invHUD = Novoline.getInstance().getModuleManager().getModule(InventoryHUD.class);
+            TargetList targetList = Novoline.getInstance().getModuleManager().getModule(TargetList.class);
             if (hover(x, y)) {
                 KillAura aura = Novoline.getInstance().getModuleManager().getModule(KillAura.class);
                 x2 = aura.getThx().get() - x;
                 y2 = aura.getThy().get() - y;
                 dragTH = true;
-            } else if (hover(x, y, hud) && hud.getHudElements().get().contains("Inventory")) {
+            } else if (invHUD != null && invHUD.isEnabled() && hover(x, y, hud)) {
                 x3 = hud.getInvx().get() - x;
                 y3 = hud.getInvy().get() - y;
                 dragInv = true;
@@ -175,7 +179,7 @@ public class GuiChat extends GuiScreen {
                 x4 = radar.getX().get() - x;
                 y4 = radar.getY().get() - y;
                 dragRadar = true;
-            } else if (hoverTL(x, y, hud) && hud.getHudElements().get().contains("TargetsList")) {
+            } else if (targetList != null && targetList.isEnabled() && hoverTL(x, y, hud)) {
                 x5 = hud.getTlx().get() - x;
                 y5 = hud.getTly().get() - y;
                 dragTL = true;
@@ -334,87 +338,86 @@ public class GuiChat extends GuiScreen {
         }
 
         HUD hud = Novoline.getInstance().getModuleManager().getModule(HUD.class);
-        if (hud.isEnabled()) {
-            if (hud.getHudElements().get().contains("Inventory")) {
-                ScaleUtils.scale(mc);
-                RenderHelper.enableGUIStandardItemLighting();
-                GlStateManager.enableDepth();
-                int x = hud.getInvx().get();
-                int y = hud.getInvy().get();
-                Gui.drawRect(x, y, x + 167, y + 73, new Color(29, 29, 29, 255).getRGB());
-                Gui.drawRect(x + 1, y + 13, x + 166, y + 72, new Color(40, 40, 40, 255).getRGB());
-                mc.fontRendererCrack.drawString("Your Inventory", x + 3, y + 3, 0xffffffff, true);
+        InventoryHUD invHUD = Novoline.getInstance().getModuleManager().getModule(InventoryHUD.class);
+        TargetList targetList = Novoline.getInstance().getModuleManager().getModule(TargetList.class);
+        if (invHUD != null && invHUD.isEnabled()) {
+            ScaleUtils.scale(mc);
+            RenderHelper.enableGUIStandardItemLighting();
+            GlStateManager.enableDepth();
+            int x = hud.getInvx().get();
+            int y = hud.getInvy().get();
+            Gui.drawRect(x, y, x + 167, y + 73, new Color(29, 29, 29, 255).getRGB());
+            Gui.drawRect(x + 1, y + 13, x + 166, y + 72, new Color(40, 40, 40, 255).getRGB());
+            mc.fontRendererCrack.drawString("Your Inventory", x + 3, y + 3, 0xffffffff, true);
 
-                boolean hasStacks = false;
-                for (int i1 = 9; i1 < mc.player.inventoryContainer.inventorySlots.size() - 9; ++i1) {
-                    Slot slot = mc.player.inventoryContainer.inventorySlots.get(i1);
-                    if (slot.getHasStack()) hasStacks = true;
-                    int i = slot.xDisplayPosition;
-                    int j = slot.yDisplayPosition;
-                    mc.getRenderItem().renderItemAndEffectIntoGUI(slot.getStack(), x + i - 4, y + j - 68);
-                    mc.getRenderItem().renderItemOverlayIntoGUI(mc.fontRendererCrack, slot.getStack(), x + i - 4, y + j - 68, null);
-                }
-                if (!hasStacks) {
-                    mc.fontRendererCrack.drawString("Empty...",
-                            x + 167 / 2 - mc.fontRendererCrack.getStringWidth("Empty...") / 2,
-                            y + 72 / 2,
-                            0xffffffff,
-                            true);
-                }
-                RenderHelper.disableStandardItemLighting();
-                GlStateManager.disableDepth();
+            boolean hasStacks = false;
+            for (int i1 = 9; i1 < mc.player.inventoryContainer.inventorySlots.size() - 9; ++i1) {
+                Slot slot = mc.player.inventoryContainer.inventorySlots.get(i1);
+                if (slot.getHasStack()) hasStacks = true;
+                int i = slot.xDisplayPosition;
+                int j = slot.yDisplayPosition;
+                mc.getRenderItem().renderItemAndEffectIntoGUI(slot.getStack(), x + i - 4, y + j - 68);
+                mc.getRenderItem().renderItemOverlayIntoGUI(mc.fontRendererCrack, slot.getStack(), x + i - 4, y + j - 68, null);
+            }
+            if (!hasStacks) {
+                mc.fontRendererCrack.drawString("Empty...",
+                        x + 167 / 2 - mc.fontRendererCrack.getStringWidth("Empty...") / 2,
+                        y + 72 / 2,
+                        0xffffffff,
+                        true);
+            }
+            RenderHelper.disableStandardItemLighting();
+            GlStateManager.disableDepth();
 
-                int mouseCoordinatex = ScaleUtils.getScaledMouseCoordinates(mc, mouseX, mouseY)[0];
-                int mouseCoordinatey = ScaleUtils.getScaledMouseCoordinates(mc, mouseX, mouseY)[1];
+            int mouseCoordinatex = ScaleUtils.getScaledMouseCoordinates(mc, mouseX, mouseY)[0];
+            int mouseCoordinatey = ScaleUtils.getScaledMouseCoordinates(mc, mouseX, mouseY)[1];
 
-                if (dragInv) {
-                    hud.getInvx().set(MathHelper.clamp_int(x3 + mouseCoordinatex, 1, hud.getInvx().getMaximum() - 167));
-                    hud.getInvy().set(MathHelper.clamp_int(y3 + mouseCoordinatey, 1, hud.getInvy().getMaximum() - 73));
-                }
-
-                if (hover(mouseCoordinatex, mouseCoordinatey, hud)) {
-
-                    if (hud.getInvx().get() > sr.getScaledWidthStatic(mc) - 50) {
-                        hud.getInvx().set(sr.getScaledWidthStatic(mc) - 50);
-                    }
-
-                    if (hud.getInvy().get() > sr.getScaledHeightStatic(mc) - 50) {
-                        hud.getInvy().set(sr.getScaledHeightStatic(mc) - 50);
-                    }
-
-                    ScaleUtils.scale(mc);
-                    RenderUtils.drawBorderedRect(hud.getInvx().get(), hud.getInvy().get(), hud.getInvx().get() + 167,
-                            hud.getInvy().get() + 73, 2, 0xffffffff, new Color(0, 0, 0, 150).getRGB());
-                }
+            if (dragInv) {
+                hud.getInvx().set(MathHelper.clamp_int(x3 + mouseCoordinatex, 1, hud.getInvx().getMaximum() - 167));
+                hud.getInvy().set(MathHelper.clamp_int(y3 + mouseCoordinatey, 1, hud.getInvy().getMaximum() - 73));
             }
 
-            if (hud.getHudElements().get().contains("TargetsList")) {
+            if (hover(mouseCoordinatex, mouseCoordinatey, hud)) {
+
+                if (hud.getInvx().get() > sr.getScaledWidthStatic(mc) - 50) {
+                    hud.getInvx().set(sr.getScaledWidthStatic(mc) - 50);
+                }
+
+                if (hud.getInvy().get() > sr.getScaledHeightStatic(mc) - 50) {
+                    hud.getInvy().set(sr.getScaledHeightStatic(mc) - 50);
+                }
+
                 ScaleUtils.scale(mc);
-                hud.renderTargetsList();
+                RenderUtils.drawBorderedRect(hud.getInvx().get(), hud.getInvy().get(), hud.getInvx().get() + 167,
+                        hud.getInvy().get() + 73, 2, 0xffffffff, new Color(0, 0, 0, 150).getRGB());
+            }
+        }
 
-                int x = ScaleUtils.getScaledMouseCoordinates(mc, mouseX, mouseY)[0];
-                int y = ScaleUtils.getScaledMouseCoordinates(mc, mouseX, mouseY)[1];
+        if (targetList != null && targetList.isEnabled()) {
+            ScaleUtils.scale(mc);
+            hud.renderTargetsList();
 
-                if (dragTL) {
-                    hud.getTlx().set(MathHelper.clamp_int(x5 + x, 1, (int) (hud.getTlx().getMaximum() - hud.getTargetListWidthAndHeight()[0])));
-                    hud.getTly().set(MathHelper.clamp_int(y5 + y, 1, (int) (hud.getTly().getMaximum() - hud.getTargetListWidthAndHeight()[1])));
-                }
+            int x = ScaleUtils.getScaledMouseCoordinates(mc, mouseX, mouseY)[0];
+            int y = ScaleUtils.getScaledMouseCoordinates(mc, mouseX, mouseY)[1];
 
-                if (hoverTL(x, y, hud)) {
-                    if (hud.getTlx().get() > sr.getScaledWidthStatic(mc) - 50) {
-                        hud.getTlx().set(sr.getScaledWidthStatic(mc) - 50);
-                    }
-
-                    if (hud.getTly().get() > sr.getScaledHeightStatic(mc) - 50) {
-                        hud.getTly().set(sr.getScaledHeightStatic(mc) - 50);
-                    }
-
-                    ScaleUtils.scale(mc);
-                    RenderUtils.drawBorderedRect(hud.getTlx().get(), hud.getTly().get() - 13, hud.getTlx().get() + hud.getTargetListWidthAndHeight()[0],
-                            hud.getTly().get() + hud.getTargetListWidthAndHeight()[1], 2, 0xffffffff, new Color(0, 0, 0, 150).getRGB());
-                }
+            if (dragTL) {
+                hud.getTlx().set(MathHelper.clamp_int(x5 + x, 1, (int) (hud.getTlx().getMaximum() - hud.getTargetListWidthAndHeight()[0])));
+                hud.getTly().set(MathHelper.clamp_int(y5 + y, 1, (int) (hud.getTly().getMaximum() - hud.getTargetListWidthAndHeight()[1])));
             }
 
+            if (hoverTL(x, y, hud)) {
+                if (hud.getTlx().get() > sr.getScaledWidthStatic(mc) - 50) {
+                    hud.getTlx().set(sr.getScaledWidthStatic(mc) - 50);
+                }
+
+                if (hud.getTly().get() > sr.getScaledHeightStatic(mc) - 50) {
+                    hud.getTly().set(sr.getScaledHeightStatic(mc) - 50);
+                }
+
+                ScaleUtils.scale(mc);
+                RenderUtils.drawBorderedRect(hud.getTlx().get(), hud.getTly().get() - 13, hud.getTlx().get() + hud.getTargetListWidthAndHeight()[0],
+                        hud.getTly().get() + hud.getTargetListWidthAndHeight()[1], 2, 0xffffffff, new Color(0, 0, 0, 150).getRGB());
+            }
         }
 
         Radar radar = Novoline.getInstance().getModuleManager().getModule(Radar.class);

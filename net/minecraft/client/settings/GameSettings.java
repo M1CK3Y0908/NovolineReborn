@@ -220,6 +220,8 @@ public class GameSettings {
     public int ofBetterGrass = 3;
     public int ofAutoSaveTicks = 4000;
     public boolean ofLagometer = false;
+    public boolean showLagometer = false;
+    public boolean ofCustomGuis = true;
     public boolean ofProfiler = false;
     public boolean ofShowFps = false;
     public boolean ofWeather = true;
@@ -2544,7 +2546,9 @@ public class GameSettings {
         FAST_MATH("", 999, "of.options.FAST_MATH", false, false),
         TRANSLUCENT_BLOCKS("", 999, "of.options.TRANSLUCENT_BLOCKS", false, false),
         DYNAMIC_FOV("", 999, "of.options.DYNAMIC_FOV", false, false),
-        DYNAMIC_LIGHTS("", 999, "of.options.DYNAMIC_LIGHTS", false, false);
+        DYNAMIC_LIGHTS("", 999, "of.options.DYNAMIC_LIGHTS", false, false),
+        FAST_RENDER("", 999, "of.options.FAST_RENDER", false, false),
+        CUSTOM_GUIS("", 999, "of.options.CUSTOM_GUIS", false, false);
 
         private static final Options[] $VALUES = new Options[]{INVERT_MOUSE, SENSITIVITY, FOV, GAMMA, SATURATION, RENDER_DISTANCE, VIEW_BOBBING, ANAGLYPH, FRAMERATE_LIMIT, FBO_ENABLE, RENDER_CLOUDS, GRAPHICS, AMBIENT_OCCLUSION, GUI_SCALE, PARTICLES, CHAT_VISIBILITY, CHAT_COLOR, CHAT_LINKS, CHAT_OPACITY, CHAT_LINKS_PROMPT, SNOOPER_ENABLED, USE_FULLSCREEN, ENABLE_VSYNC, USE_VBO, TOUCHSCREEN, CHAT_SCALE, CHAT_WIDTH, CHAT_HEIGHT_FOCUSED, CHAT_HEIGHT_UNFOCUSED, MIPMAP_LEVELS, FORCE_UNICODE_FONT, STREAM_BYTES_PER_PIXEL, STREAM_VOLUME_MIC, STREAM_VOLUME_SYSTEM, STREAM_KBPS, STREAM_FPS, STREAM_COMPRESSION, STREAM_SEND_METADATA, STREAM_CHAT_ENABLED, STREAM_CHAT_USER_FILTER, STREAM_MIC_TOGGLE_BEHAVIOR, BLOCK_ALTERNATIVES, REDUCED_DEBUG_INFO, ENTITY_SHADOWS};
         private static final String __OBFID = "CL_00000653";

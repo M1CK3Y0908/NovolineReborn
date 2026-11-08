@@ -9,61 +9,60 @@ import net.minecraft.client.renderer.entity.RenderPlayer;
 import net.minecraft.client.renderer.entity.layers.LayerRenderer;
 import net.minecraft.entity.EntityLivingBase;
 
-public class PlayerItemsLayer implements LayerRenderer
-{
+public class PlayerItemsLayer implements LayerRenderer {
     private RenderPlayer renderPlayer = null;
 
-    public PlayerItemsLayer(RenderPlayer p_i76_1_)
-    {
-        this.renderPlayer = p_i76_1_;
+    public PlayerItemsLayer(RenderPlayer renderPlayer) {
+        this.renderPlayer = renderPlayer;
     }
 
-    public void doRenderLayer(EntityLivingBase entitylivingbaseIn, float p_177141_2_, float p_177141_3_, float partialTicks, float p_177141_5_, float p_177141_6_, float p_177141_7_, float scale)
-    {
-        this.renderEquippedItems(entitylivingbaseIn, scale, partialTicks);
+    @Override
+    public void doRenderLayer(
+        EntityLivingBase entityLiving,
+        float limbSwing,
+        float limbSwingAmount,
+        float partialTicks,
+        float ticksExisted,
+        float headYaw,
+        float rotationPitch,
+        float scale
+    ) {
+        this.renderEquippedItems(entityLiving, scale, partialTicks);
     }
 
-    protected void renderEquippedItems(EntityLivingBase p_renderEquippedItems_1_, float p_renderEquippedItems_2_, float p_renderEquippedItems_3_)
-    {
-        if (Config.isShowCapes())
-        {
-            if (p_renderEquippedItems_1_ instanceof AbstractClientPlayer)
-            {
-                AbstractClientPlayer abstractclientplayer = (AbstractClientPlayer)p_renderEquippedItems_1_;
+    protected void renderEquippedItems(EntityLivingBase entityLiving, float scale, float partialTicks) {
+        if (Config.isShowCapes()) {
+            if (entityLiving instanceof AbstractClientPlayer) {
+                AbstractClientPlayer abstractclientplayer = (AbstractClientPlayer)entityLiving;
                 GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
                 GlStateManager.disableRescaleNormal();
                 GlStateManager.enableCull();
                 ModelBiped modelbiped = (ModelBiped)this.renderPlayer.getMainModel();
-                PlayerConfigurations.renderPlayerItems(modelbiped, abstractclientplayer, p_renderEquippedItems_2_, p_renderEquippedItems_3_);
+                PlayerConfigurations.renderPlayerItems(modelbiped, abstractclientplayer, scale, partialTicks);
                 GlStateManager.disableCull();
             }
         }
     }
 
-    public boolean shouldCombineTextures()
-    {
+    @Override
+    public boolean shouldCombineTextures() {
         return false;
     }
 
-    public static void register(Map p_register_0_)
-    {
-        Set set = p_register_0_.keySet();
+    public static void register(Map renderPlayerMap) {
+        Set set = renderPlayerMap.keySet();
         boolean flag = false;
 
-        for (Object object : set)
-        {
-            Object object1 = p_register_0_.get(object);
-
-            if (object1 instanceof RenderPlayer)
-            {
+        for (Object object : set) {
+            Object object1 = renderPlayerMap.get(object);
+            if (object1 instanceof RenderPlayer) {
                 RenderPlayer renderplayer = (RenderPlayer)object1;
                 renderplayer.addLayer(new PlayerItemsLayer(renderplayer));
                 flag = true;
             }
         }
 
-        if (!flag)
-        {
+        if (!flag) {
             Config.warn("PlayerItemsLayer not registered");
         }
     }

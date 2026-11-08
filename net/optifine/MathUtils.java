@@ -1,25 +1,46 @@
 package net.optifine;
 
-public class MathUtils
-{
-    public static int getAverage(int[] p_getAverage_0_)
-    {
-        if (p_getAverage_0_.length <= 0)
-        {
+import net.minecraft.util.MathHelper;
+
+public class MathUtils {
+    public static int getAverage(int[] vals) {
+        if (vals.length <= 0) {
             return 0;
         }
-        else
-        {
-            int i = 0;
 
-            for (int j = 0; j < p_getAverage_0_.length; ++j)
-            {
-                int k = p_getAverage_0_[j];
-                i += k;
-            }
+        int i = getSum(vals);
+        return i / vals.length;
+    }
 
-            int l = i / p_getAverage_0_.length;
-            return l;
+    public static int getSum(int[] vals) {
+        if (vals.length <= 0) {
+            return 0;
         }
+
+        int i = 0;
+
+        for (int j = 0; j < vals.length; j++) {
+            int k = vals[j];
+            i += k;
+        }
+
+        return i;
+    }
+
+    public static int roundDownToPowerOfTwo(int val) {
+        int i = MathHelper.roundUpToPowerOfTwo(val);
+        return val == i ? i : i / 2;
+    }
+
+    public static boolean equalsDelta(float f1, float f2, float delta) {
+        return Math.abs(f1 - f2) <= delta;
+    }
+
+    public static float toDeg(float angle) {
+        return angle * 180.0F / (float)Math.PI;
+    }
+
+    public static float toRad(float angle) {
+        return angle / 180.0F * (float)Math.PI;
     }
 }

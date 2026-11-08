@@ -1,6 +1,7 @@
 package net.optifine;
 
 import java.util.Arrays;
+import java.util.regex.Pattern;
 import net.minecraft.nbt.NBTBase;
 import net.minecraft.nbt.NBTTagByte;
 import net.minecraft.nbt.NBTTagCompound;
@@ -13,12 +14,13 @@ import net.minecraft.nbt.NBTTagShort;
 import net.minecraft.nbt.NBTTagString;
 import org.apache.commons.lang3.StringEscapeUtils;
 
-public class NbtTagValue
-{
+public class NbtTagValue {
     private String[] parents = null;
     private String name = null;
+    private boolean negative = false;
     private int type = 0;
     private String value = null;
+    private int valueFormat = 0;
     private static final int TYPE_TEXT = 0;
     private static final int TYPE_PATTERN = 1;
     private static final int TYPE_IPATTERN = 2;
@@ -28,115 +30,90 @@ public class NbtTagValue
     private static final String PREFIX_IPATTERN = "ipattern:";
     private static final String PREFIX_REGEX = "regex:";
     private static final String PREFIX_IREGEX = "iregex:";
+    private static final int FORMAT_DEFAULT = 0;
+    private static final int FORMAT_HEX_COLOR = 1;
+    private static final String PREFIX_HEX_COLOR = "#";
+    private static final Pattern PATTERN_HEX_COLOR = Pattern.compile("^#[0-9a-f]{6}+$");
 
-    public NbtTagValue(String p_i69_1_, String p_i69_2_)
-    {
-        String[] astring = Config.tokenize(p_i69_1_, ".");
-        this.parents = (String[])Arrays.copyOfRange(astring, 0, astring.length - 1);
+    public NbtTagValue(String tag, String value) {
+        String[] astring = Config.tokenize(tag, ".");
+        this.parents = Arrays.copyOfRange(astring, 0, astring.length - 1);
         this.name = astring[astring.length - 1];
+        if (value.startsWith("!")) {
+            this.negative = true;
+            value = value.substring(1);
+        }
 
-        if (p_i69_2_.startsWith("pattern:"))
-        {
+        if (value.startsWith("pattern:")) {
             this.type = 1;
-            p_i69_2_ = p_i69_2_.substring("pattern:".length());
-        }
-        else if (p_i69_2_.startsWith("ipattern:"))
-        {
+            value = value.substring("pattern:".length());
+        } else if (value.startsWith("ipattern:")) {
             this.type = 2;
-            p_i69_2_ = p_i69_2_.substring("ipattern:".length()).toLowerCase();
-        }
-        else if (p_i69_2_.startsWith("regex:"))
-        {
+            value = value.substring("ipattern:".length()).toLowerCase();
+        } else if (value.startsWith("regex:")) {
             this.type = 3;
-            p_i69_2_ = p_i69_2_.substring("regex:".length());
-        }
-        else if (p_i69_2_.startsWith("iregex:"))
-        {
+            value = value.substring("regex:".length());
+        } else if (value.startsWith("iregex:")) {
             this.type = 4;
-            p_i69_2_ = p_i69_2_.substring("iregex:".length()).toLowerCase();
-        }
-        else
-        {
+            value = value.substring("iregex:".length()).toLowerCase();
+        } else {
             this.type = 0;
         }
 
-        p_i69_2_ = StringEscapeUtils.unescapeJava(p_i69_2_);
-        this.value = p_i69_2_;
+        value = StringEscapeUtils.unescapeJava(value);
+        if (this.type == 0 && PATTERN_HEX_COLOR.matcher(value).matches()) {
+            this.valueFormat = 1;
+        }
+
+        this.value = value;
     }
 
-    public boolean matches(NBTTagCompound p_matches_1_)
-    {
-        if (p_matches_1_ == null)
-        {
+    public boolean matches(NBTTagCompound nbt) {
+        return this.negative ? !this.matchesCompound(nbt) : this.matchesCompound(nbt);
+    }
+
+    public boolean matchesCompound(NBTTagCompound nbt) {
+        if (nbt == null) {
             return false;
         }
-        else
-        {
-            NBTBase nbtbase = p_matches_1_;
 
-            for (int i = 0; i < this.parents.length; ++i)
-            {
-                String s = this.parents[i];
-                nbtbase = getChildTag(nbtbase, s);
+        NBTBase nbtbase = nbt;
 
-                if (nbtbase == null)
-                {
-                    return false;
-                }
-            }
-
-            if (this.name.equals("*"))
-            {
-                return this.matchesAnyChild(nbtbase);
-            }
-            else
-            {
-                nbtbase = getChildTag(nbtbase, this.name);
-
-                if (nbtbase == null)
-                {
-                    return false;
-                }
-                else if (this.matches(nbtbase))
-                {
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
+        for (int i = 0; i < this.parents.length; i++) {
+            String s = this.parents[i];
+            nbtbase = getChildTag(nbtbase, s);
+            if (nbtbase == null) {
+                return false;
             }
         }
+
+        if (this.name.equals("*")) {
+            return this.matchesAnyChild(nbtbase);
+        }
+
+        nbtbase = getChildTag(nbtbase, this.name);
+        return nbtbase == null ? false : this.matchesBase(nbtbase);
     }
 
-    private boolean matchesAnyChild(NBTBase p_matchesAnyChild_1_)
-    {
-        if (p_matchesAnyChild_1_ instanceof NBTTagCompound)
-        {
-            NBTTagCompound nbttagcompound = (NBTTagCompound)p_matchesAnyChild_1_;
+    private boolean matchesAnyChild(NBTBase tagBase) {
+        if (tagBase instanceof NBTTagCompound) {
+            NBTTagCompound nbttagcompound = (NBTTagCompound)tagBase;
 
-            for (String s : nbttagcompound.getKeySet())
-            {
+            for (String s : nbttagcompound.getKeySet()) {
                 NBTBase nbtbase = nbttagcompound.getTag(s);
-
-                if (this.matches(nbtbase))
-                {
+                if (this.matchesBase(nbtbase)) {
                     return true;
                 }
             }
         }
 
-        if (p_matchesAnyChild_1_ instanceof NBTTagList)
-        {
-            NBTTagList nbttaglist = (NBTTagList)p_matchesAnyChild_1_;
+        if (tagBase instanceof NBTTagList) {
+            NBTTagList nbttaglist = (NBTTagList)tagBase;
             int i = nbttaglist.tagCount();
 
-            for (int j = 0; j < i; ++j)
-            {
+            for (int j = 0; j < i; j++) {
                 NBTBase nbtbase1 = nbttaglist.get(j);
-
-                if (this.matches(nbtbase1))
-                {
+                if (this.matchesBase(nbtbase1)) {
                     return true;
                 }
             }
@@ -145,140 +122,106 @@ public class NbtTagValue
         return false;
     }
 
-    private static NBTBase getChildTag(NBTBase p_getChildTag_0_, String p_getChildTag_1_)
-    {
-        if (p_getChildTag_0_ instanceof NBTTagCompound)
-        {
-            NBTTagCompound nbttagcompound = (NBTTagCompound)p_getChildTag_0_;
-            return nbttagcompound.getTag(p_getChildTag_1_);
+    private static NBTBase getChildTag(NBTBase tagBase, String tag) {
+        if (tagBase instanceof NBTTagCompound) {
+            NBTTagCompound nbttagcompound = (NBTTagCompound)tagBase;
+            return nbttagcompound.getTag(tag);
         }
-        else if (p_getChildTag_0_ instanceof NBTTagList)
-        {
-            NBTTagList nbttaglist = (NBTTagList)p_getChildTag_0_;
-            int i = Config.parseInt(p_getChildTag_1_, -1);
+
+        if (tagBase instanceof NBTTagList) {
+            NBTTagList nbttaglist = (NBTTagList)tagBase;
+            if (tag.equals("count")) {
+                return new NBTTagInt(nbttaglist.tagCount());
+            }
+
+            int i = Config.parseInt(tag, -1);
             return i < 0 ? null : nbttaglist.get(i);
-        }
-        else
-        {
+        } else {
             return null;
         }
     }
 
-    private boolean matches(NBTBase p_matches_1_)
-    {
-        if (p_matches_1_ == null)
-        {
+    public boolean matchesBase(NBTBase nbtBase) {
+        if (nbtBase == null) {
             return false;
         }
-        else
-        {
-            String s = getValue(p_matches_1_);
 
-            if (s == null)
-            {
-                return false;
-            }
-            else
-            {
-                switch (this.type)
-                {
-                    case 0:
-                        return s.equals(this.value);
+        String s = getNbtString(nbtBase, this.valueFormat);
+        return this.matchesValue(s);
+    }
 
-                    case 1:
-                        return this.matchesPattern(s, this.value);
+    public boolean matchesValue(String nbtValue) {
+        if (nbtValue == null) {
+            return false;
+        }
 
-                    case 2:
-                        return this.matchesPattern(s.toLowerCase(), this.value);
-
-                    case 3:
-                        return this.matchesRegex(s, this.value);
-
-                    case 4:
-                        return this.matchesRegex(s.toLowerCase(), this.value);
-
-                    default:
-                        throw new IllegalArgumentException("Unknown NbtTagValue type: " + this.type);
-                }
-            }
+        switch (this.type) {
+            case 0:
+                return nbtValue.equals(this.value);
+            case 1:
+                return this.matchesPattern(nbtValue, this.value);
+            case 2:
+                return this.matchesPattern(nbtValue.toLowerCase(), this.value);
+            case 3:
+                return this.matchesRegex(nbtValue, this.value);
+            case 4:
+                return this.matchesRegex(nbtValue.toLowerCase(), this.value);
+            default:
+                throw new IllegalArgumentException("Unknown NbtTagValue type: " + this.type);
         }
     }
 
-    private boolean matchesPattern(String p_matchesPattern_1_, String p_matchesPattern_2_)
-    {
-        return StrUtils.equalsMask(p_matchesPattern_1_, p_matchesPattern_2_, '*', '?');
+    private boolean matchesPattern(String str, String pattern) {
+        return StrUtils.equalsMask(str, pattern, '*', '?');
     }
 
-    private boolean matchesRegex(String p_matchesRegex_1_, String p_matchesRegex_2_)
-    {
-        return p_matchesRegex_1_.matches(p_matchesRegex_2_);
+    private boolean matchesRegex(String str, String regex) {
+        return str.matches(regex);
     }
 
-    private static String getValue(NBTBase p_getValue_0_)
-    {
-        if (p_getValue_0_ == null)
-        {
+    private static String getNbtString(NBTBase nbtBase, int format) {
+        if (nbtBase == null) {
             return null;
-        }
-        else if (p_getValue_0_ instanceof NBTTagString)
-        {
-            NBTTagString nbttagstring = (NBTTagString)p_getValue_0_;
+        } else if (nbtBase instanceof NBTTagString) {
+            NBTTagString nbttagstring = (NBTTagString)nbtBase;
             return nbttagstring.getString();
-        }
-        else if (p_getValue_0_ instanceof NBTTagInt)
-        {
-            NBTTagInt nbttagint = (NBTTagInt)p_getValue_0_;
-            return Integer.toString(nbttagint.getInt());
-        }
-        else if (p_getValue_0_ instanceof NBTTagByte)
-        {
-            NBTTagByte nbttagbyte = (NBTTagByte)p_getValue_0_;
+        } else if (nbtBase instanceof NBTTagInt) {
+            NBTTagInt nbttagint = (NBTTagInt)nbtBase;
+            return format == 1 ? "#" + StrUtils.fillLeft(Integer.toHexString(nbttagint.getInt()), 6, '0') : Integer.toString(nbttagint.getInt());
+        } else if (nbtBase instanceof NBTTagByte) {
+            NBTTagByte nbttagbyte = (NBTTagByte)nbtBase;
             return Byte.toString(nbttagbyte.getByte());
-        }
-        else if (p_getValue_0_ instanceof NBTTagShort)
-        {
-            NBTTagShort nbttagshort = (NBTTagShort)p_getValue_0_;
+        } else if (nbtBase instanceof NBTTagShort) {
+            NBTTagShort nbttagshort = (NBTTagShort)nbtBase;
             return Short.toString(nbttagshort.getShort());
-        }
-        else if (p_getValue_0_ instanceof NBTTagLong)
-        {
-            NBTTagLong nbttaglong = (NBTTagLong)p_getValue_0_;
+        } else if (nbtBase instanceof NBTTagLong) {
+            NBTTagLong nbttaglong = (NBTTagLong)nbtBase;
             return Long.toString(nbttaglong.getLong());
-        }
-        else if (p_getValue_0_ instanceof NBTTagFloat)
-        {
-            NBTTagFloat nbttagfloat = (NBTTagFloat)p_getValue_0_;
+        } else if (nbtBase instanceof NBTTagFloat) {
+            NBTTagFloat nbttagfloat = (NBTTagFloat)nbtBase;
             return Float.toString(nbttagfloat.getFloat());
-        }
-        else if (p_getValue_0_ instanceof NBTTagDouble)
-        {
-            NBTTagDouble nbttagdouble = (NBTTagDouble)p_getValue_0_;
+        } else if (nbtBase instanceof NBTTagDouble) {
+            NBTTagDouble nbttagdouble = (NBTTagDouble)nbtBase;
             return Double.toString(nbttagdouble.getDouble());
-        }
-        else
-        {
-            return p_getValue_0_.toString();
+        } else {
+            return nbtBase.toString();
         }
     }
 
-    public String toString()
-    {
+    @Override
+    public String toString() {
         StringBuffer stringbuffer = new StringBuffer();
 
-        for (int i = 0; i < this.parents.length; ++i)
-        {
+        for (int i = 0; i < this.parents.length; i++) {
             String s = this.parents[i];
-
-            if (i > 0)
-            {
+            if (i > 0) {
                 stringbuffer.append(".");
             }
 
             stringbuffer.append(s);
         }
 
-        if (stringbuffer.length() > 0)
-        {
+        if (stringbuffer.length() > 0) {
             stringbuffer.append(".");
         }
 

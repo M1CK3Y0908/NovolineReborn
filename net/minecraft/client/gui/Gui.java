@@ -243,6 +243,8 @@ public class Gui {
     /**
      * Draws a textured rectangle using the texture currently bound to the TextureManager
      */
+    public void drawTexturedModalRect(double xCoord, double yCoord, int minU, int minV, int maxU, int maxV) { drawTexturedModalRect((float) xCoord, (float) yCoord, minU, minV, maxU, maxV); }
+
     public void drawTexturedModalRect(float xCoord, float yCoord, int minU, int minV, int maxU, int maxV) {
         float f = 0.00390625F;
         float f1 = 0.00390625F;

@@ -1,12 +1,11 @@
 package net.shadersmod.client;
 
-import net.optifine.StrUtils;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import net.optifine.StrUtils;
 
 public class ShaderPackZip implements IShaderPack {
     protected File packFile;
@@ -17,17 +16,19 @@ public class ShaderPackZip implements IShaderPack {
         this.packZipFile = null;
     }
 
+    @Override
     public void close() {
         if (this.packZipFile != null) {
             try {
                 this.packZipFile.close();
-            } catch (Exception var2) {
+            } catch (Exception exception) {
             }
 
             this.packZipFile = null;
         }
     }
 
+    @Override
     public InputStream getResourceAsStream(String resName) {
         try {
             if (this.packZipFile == null) {
@@ -37,11 +38,12 @@ public class ShaderPackZip implements IShaderPack {
             String s = StrUtils.removePrefix(resName, "/");
             ZipEntry zipentry = this.packZipFile.getEntry(s);
             return zipentry == null ? null : this.packZipFile.getInputStream(zipentry);
-        } catch (Exception var4) {
+        } catch (Exception exception) {
             return null;
         }
     }
 
+    @Override
     public boolean hasDirectory(String resName) {
         try {
             if (this.packZipFile == null) {
@@ -51,11 +53,12 @@ public class ShaderPackZip implements IShaderPack {
             String s = StrUtils.removePrefix(resName, "/");
             ZipEntry zipentry = this.packZipFile.getEntry(s);
             return zipentry != null;
-        } catch (IOException var4) {
+        } catch (IOException ioexception) {
             return false;
         }
     }
 
+    @Override
     public String getName() {
         return this.packFile.getName();
     }

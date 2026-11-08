@@ -1,8 +1,9 @@
 package net.shadersmod.client;
 
 import net.minecraft.client.renderer.texture.ITextureObject;
+import net.minecraft.client.renderer.texture.TextureUtil;
 
-public class CustomTexture {
+public class CustomTexture implements ICustomTexture {
     private int textureUnit = -1;
     private String path = null;
     private ITextureObject texture = null;
@@ -13,6 +14,7 @@ public class CustomTexture {
         this.texture = texture;
     }
 
+    @Override
     public int getTextureUnit() {
         return this.textureUnit;
     }
@@ -25,6 +27,17 @@ public class CustomTexture {
         return this.texture;
     }
 
+    @Override
+    public int getTextureId() {
+        return this.texture.getGlTextureId();
+    }
+
+    @Override
+    public void deleteTexture() {
+        TextureUtil.deleteTexture(this.texture.getGlTextureId());
+    }
+
+    @Override
     public String toString() {
         return "textureUnit: " + this.textureUnit + ", path: " + this.path + ", glTextureId: " + this.texture.getGlTextureId();
     }

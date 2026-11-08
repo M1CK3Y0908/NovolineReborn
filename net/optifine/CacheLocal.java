@@ -1,7 +1,6 @@
 package net.optifine;
 
-public class CacheLocal
-{
+public class CacheLocal {
     private int maxX = 18;
     private int maxY = 128;
     private int maxZ = 18;
@@ -12,64 +11,50 @@ public class CacheLocal
     private int[] lastZs = null;
     private int lastDz = 0;
 
-    public CacheLocal(int p_i25_1_, int p_i25_2_, int p_i25_3_)
-    {
-        this.maxX = p_i25_1_;
-        this.maxY = p_i25_2_;
-        this.maxZ = p_i25_3_;
-        this.cache = new int[p_i25_1_][p_i25_2_][p_i25_3_];
+    public CacheLocal(int maxX, int maxY, int maxZ) {
+        this.maxX = maxX;
+        this.maxY = maxY;
+        this.maxZ = maxZ;
+        this.cache = new int[maxX][maxY][maxZ];
         this.resetCache();
     }
 
-    public void resetCache()
-    {
-        for (int i = 0; i < this.maxX; ++i)
-        {
+    public void resetCache() {
+        for (int i = 0; i < this.maxX; i++) {
             int[][] aint = this.cache[i];
 
-            for (int j = 0; j < this.maxY; ++j)
-            {
+            for (int j = 0; j < this.maxY; j++) {
                 int[] aint1 = aint[j];
 
-                for (int k = 0; k < this.maxZ; ++k)
-                {
+                for (int k = 0; k < this.maxZ; k++) {
                     aint1[k] = -1;
                 }
             }
         }
     }
 
-    public void setOffset(int p_setOffset_1_, int p_setOffset_2_, int p_setOffset_3_)
-    {
-        this.offsetX = p_setOffset_1_;
-        this.offsetY = p_setOffset_2_;
-        this.offsetZ = p_setOffset_3_;
+    public void setOffset(int x, int y, int z) {
+        this.offsetX = x;
+        this.offsetY = y;
+        this.offsetZ = z;
         this.resetCache();
     }
 
-    public int get(int p_get_1_, int p_get_2_, int p_get_3_)
-    {
-        try
-        {
-            this.lastZs = this.cache[p_get_1_ - this.offsetX][p_get_2_ - this.offsetY];
-            this.lastDz = p_get_3_ - this.offsetZ;
+    public int get(int x, int y, int z) {
+        try {
+            this.lastZs = this.cache[x - this.offsetX][y - this.offsetY];
+            this.lastDz = z - this.offsetZ;
             return this.lastZs[this.lastDz];
-        }
-        catch (ArrayIndexOutOfBoundsException arrayindexoutofboundsexception)
-        {
+        } catch (ArrayIndexOutOfBoundsException arrayindexoutofboundsexception) {
             arrayindexoutofboundsexception.printStackTrace();
             return -1;
         }
     }
 
-    public void setLast(int p_setLast_1_)
-    {
-        try
-        {
-            this.lastZs[this.lastDz] = p_setLast_1_;
-        }
-        catch (Exception exception)
-        {
+    public void setLast(int val) {
+        try {
+            this.lastZs[this.lastDz] = val;
+        } catch (Exception exception) {
             exception.printStackTrace();
         }
     }

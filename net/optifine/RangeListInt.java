@@ -1,22 +1,23 @@
 package net.optifine;
 
-public class RangeListInt
-{
+public class RangeListInt {
     private RangeInt[] ranges = new RangeInt[0];
 
-    public void addRange(RangeInt p_addRange_1_)
-    {
-        this.ranges = (RangeInt[])((RangeInt[])Config.addObjectToArray(this.ranges, p_addRange_1_));
+    public RangeListInt() {
     }
 
-    public boolean isInRange(int p_isInRange_1_)
-    {
-        for (int i = 0; i < this.ranges.length; ++i)
-        {
-            RangeInt rangeint = this.ranges[i];
+    public RangeListInt(RangeInt ri) {
+        this.addRange(ri);
+    }
 
-            if (rangeint.isInRange(p_isInRange_1_))
-            {
+    public void addRange(RangeInt ri) {
+        this.ranges = (RangeInt[])Config.addObjectToArray(this.ranges, ri);
+    }
+
+    public boolean isInRange(int val) {
+        for (int i = 0; i < this.ranges.length; i++) {
+            RangeInt rangeint = this.ranges[i];
+            if (rangeint.isInRange(val)) {
                 return true;
             }
         }
@@ -24,27 +25,22 @@ public class RangeListInt
         return false;
     }
 
-    public int getCountRanges()
-    {
+    public int getCountRanges() {
         return this.ranges.length;
     }
 
-    public RangeInt getRange(int p_getRange_1_)
-    {
-        return this.ranges[p_getRange_1_];
+    public RangeInt getRange(int i) {
+        return this.ranges[i];
     }
 
-    public String toString()
-    {
+    @Override
+    public String toString() {
         StringBuffer stringbuffer = new StringBuffer();
         stringbuffer.append("[");
 
-        for (int i = 0; i < this.ranges.length; ++i)
-        {
+        for (int i = 0; i < this.ranges.length; i++) {
             RangeInt rangeint = this.ranges[i];
-
-            if (i > 0)
-            {
+            if (i > 0) {
                 stringbuffer.append(", ");
             }
 

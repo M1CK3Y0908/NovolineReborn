@@ -2,48 +2,52 @@ package net.optifine;
 
 import java.lang.reflect.Field;
 
-public class FieldLocatorName implements IFieldLocator
-{
+public class FieldLocatorName implements IFieldLocator {
     private ReflectorClass reflectorClass = null;
     private String targetFieldName = null;
 
-    public FieldLocatorName(ReflectorClass p_i38_1_, String p_i38_2_)
-    {
-        this.reflectorClass = p_i38_1_;
-        this.targetFieldName = p_i38_2_;
+    public FieldLocatorName(ReflectorClass reflectorClass, String targetFieldName) {
+        this.reflectorClass = reflectorClass;
+        this.targetFieldName = targetFieldName;
     }
 
-    public Field getField()
-    {
+    @Override
+    public Field getField() {
         Class oclass = this.reflectorClass.getTargetClass();
-
-        if (oclass == null)
-        {
+        if (oclass == null) {
             return null;
         }
-        else
-        {
-            try
-            {
-                Field field = oclass.getDeclaredField(this.targetFieldName);
-                field.setAccessible(true);
+
+        try {
+            Field field = this.getDeclaredField(oclass, this.targetFieldName);
+            field.setAccessible(true);
+            return field;
+        } catch (NoSuchFieldException nosuchfieldexception) {
+            Config.log("(Reflector) Field not present: " + oclass.getName() + "." + this.targetFieldName);
+            return null;
+        } catch (SecurityException securityexception) {
+            securityexception.printStackTrace();
+            return null;
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
+            return null;
+        }
+    }
+
+    private Field getDeclaredField(Class cls, String name) throws NoSuchFieldException {
+        Field[] afield = cls.getDeclaredFields();
+
+        for (int i = 0; i < afield.length; i++) {
+            Field field = afield[i];
+            if (field.getName().equals(name)) {
                 return field;
             }
-            catch (NoSuchFieldException var3)
-            {
-                Config.log("(Reflector) Field not present: " + oclass.getName() + "." + this.targetFieldName);
-                return null;
-            }
-            catch (SecurityException securityexception)
-            {
-                securityexception.printStackTrace();
-                return null;
-            }
-            catch (Throwable throwable)
-            {
-                throwable.printStackTrace();
-                return null;
-            }
+        }
+
+        if (cls == Object.class) {
+            throw new NoSuchFieldException(name);
+        } else {
+            return this.getDeclaredField(cls.getSuperclass(), name);
         }
     }
 }

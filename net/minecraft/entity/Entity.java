@@ -279,6 +279,8 @@ public abstract class Entity implements ICommandSender {
         entityInit();
     }
 
+    public int getEntityId() { return this.getEntityID(); }
+
     public int getEntityID() {
         return entityId;
     }

@@ -13,4 +13,7 @@ public class GuiButtonShaderOption extends GuiButton {
     public ShaderOption getShaderOption() {
         return this.shaderOption;
     }
+
+    public void valueChanged() {
+    }
 }

@@ -12,8 +12,7 @@ import net.minecraft.util.LongHashMap;
 import net.minecraft.world.ChunkCoordIntPair;
 import net.minecraft.world.NextTickListEntry;
 
-public class NextTickHashSet extends TreeSet
-{
+public class NextTickHashSet extends TreeSet {
     private LongHashMap longHashMap = new LongHashMap();
     private int minX = Integer.MIN_VALUE;
     private int minZ = Integer.MIN_VALUE;
@@ -21,114 +20,80 @@ public class NextTickHashSet extends TreeSet
     private int maxZ = Integer.MIN_VALUE;
     private static final int UNDEFINED = Integer.MIN_VALUE;
 
-    public NextTickHashSet(Set p_i70_1_)
-    {
-        for (Object object : p_i70_1_)
-        {
+    public NextTickHashSet(Set oldSet) {
+        for (Object object : oldSet) {
             this.add(object);
         }
     }
 
-    public boolean contains(Object p_contains_1_)
-    {
-        if (!(p_contains_1_ instanceof NextTickListEntry))
-        {
+    @Override
+    public boolean contains(Object obj) {
+        if (!(obj instanceof NextTickListEntry)) {
             return false;
         }
-        else
-        {
-            NextTickListEntry nextticklistentry = (NextTickListEntry)p_contains_1_;
-            Set set = this.getSubSet(nextticklistentry, false);
-            return set == null ? false : set.contains(nextticklistentry);
-        }
+
+        NextTickListEntry nextticklistentry = (NextTickListEntry)obj;
+        Set set = this.getSubSet(nextticklistentry, false);
+        return set == null ? false : set.contains(nextticklistentry);
     }
 
-    public boolean add(Object p_add_1_)
-    {
-        if (!(p_add_1_ instanceof NextTickListEntry))
-        {
+    @Override
+    public boolean add(Object obj) {
+        if (!(obj instanceof NextTickListEntry)) {
             return false;
-        }
-        else
-        {
-            NextTickListEntry nextticklistentry = (NextTickListEntry)p_add_1_;
-
-            if (nextticklistentry == null)
-            {
+        } else {
+            NextTickListEntry nextticklistentry = (NextTickListEntry)obj;
+            if (nextticklistentry == null) {
                 return false;
-            }
-            else
-            {
+            } else {
                 Set set = this.getSubSet(nextticklistentry, true);
                 boolean flag = set.add(nextticklistentry);
-                boolean flag1 = super.add(p_add_1_);
-
-                if (flag != flag1)
-                {
+                boolean flag1 = super.add(obj);
+                if (flag != flag1) {
                     throw new IllegalStateException("Added: " + flag + ", addedParent: " + flag1);
-                }
-                else
-                {
+                } else {
                     return flag1;
                 }
             }
         }
     }
 
-    public boolean remove(Object p_remove_1_)
-    {
-        if (!(p_remove_1_ instanceof NextTickListEntry))
-        {
+    @Override
+    public boolean remove(Object obj) {
+        if (!(obj instanceof NextTickListEntry)) {
             return false;
-        }
-        else
-        {
-            NextTickListEntry nextticklistentry = (NextTickListEntry)p_remove_1_;
+        } else {
+            NextTickListEntry nextticklistentry = (NextTickListEntry)obj;
             Set set = this.getSubSet(nextticklistentry, false);
-
-            if (set == null)
-            {
+            if (set == null) {
                 return false;
-            }
-            else
-            {
+            } else {
                 boolean flag = set.remove(nextticklistentry);
                 boolean flag1 = super.remove(nextticklistentry);
-
-                if (flag != flag1)
-                {
+                if (flag != flag1) {
                     throw new IllegalStateException("Added: " + flag + ", addedParent: " + flag1);
-                }
-                else
-                {
+                } else {
                     return flag1;
                 }
             }
         }
     }
 
-    private Set getSubSet(NextTickListEntry p_getSubSet_1_, boolean p_getSubSet_2_)
-    {
-        if (p_getSubSet_1_ == null)
-        {
+    private Set getSubSet(NextTickListEntry entry, boolean autoCreate) {
+        if (entry == null) {
             return null;
         }
-        else
-        {
-            BlockPos blockpos = p_getSubSet_1_.position;
-            int i = blockpos.getX() >> 4;
-            int j = blockpos.getZ() >> 4;
-            return this.getSubSet(i, j, p_getSubSet_2_);
-        }
+
+        BlockPos blockpos = entry.position;
+        int i = blockpos.getX() >> 4;
+        int j = blockpos.getZ() >> 4;
+        return this.getSubSet(i, j, autoCreate);
     }
 
-    private Set getSubSet(int p_getSubSet_1_, int p_getSubSet_2_, boolean p_getSubSet_3_)
-    {
-        long i = ChunkCoordIntPair.chunkXZ2Int(p_getSubSet_1_, p_getSubSet_2_);
+    private Set getSubSet(int cx, int cz, boolean autoCreate) {
+        long i = ChunkCoordIntPair.chunkXZ2Int(cx, cz);
         HashSet hashset = (HashSet)this.longHashMap.getValueByKey(i);
-
-        if (hashset == null && p_getSubSet_3_)
-        {
+        if (hashset == null && autoCreate) {
             hashset = new HashSet();
             this.longHashMap.add(i, hashset);
         }
@@ -136,62 +101,46 @@ public class NextTickHashSet extends TreeSet
         return hashset;
     }
 
-    public Iterator iterator()
-    {
-        if (this.minX == Integer.MIN_VALUE)
-        {
+    @Override
+    public Iterator iterator() {
+        if (this.minX == Integer.MIN_VALUE) {
             return super.iterator();
         }
-        else if (this.size() <= 0)
-        {
+
+        if (this.size() <= 0) {
             return Iterators.emptyIterator();
         }
-        else
-        {
-            int i = this.minX >> 4;
-            int j = this.minZ >> 4;
-            int k = this.maxX >> 4;
-            int l = this.maxZ >> 4;
-            List list = new ArrayList();
 
-            for (int i1 = i; i1 <= k; ++i1)
-            {
-                for (int j1 = j; j1 <= l; ++j1)
-                {
-                    Set set = this.getSubSet(i1, j1, false);
+        int i = this.minX >> 4;
+        int j = this.minZ >> 4;
+        int k = this.maxX >> 4;
+        int l = this.maxZ >> 4;
+        List list = new ArrayList();
 
-                    if (set != null)
-                    {
-                        list.add(set.iterator());
-                    }
+        for (int i1 = i; i1 <= k; i1++) {
+            for (int j1 = j; j1 <= l; j1++) {
+                Set set = this.getSubSet(i1, j1, false);
+                if (set != null) {
+                    list.add(set.iterator());
                 }
             }
+        }
 
-            if (list.size() <= 0)
-            {
-                return Iterators.emptyIterator();
-            }
-            else if (list.size() == 1)
-            {
-                return (Iterator)list.get(0);
-            }
-            else
-            {
-                return Iterators.concat(list.iterator());
-            }
+        if (list.size() <= 0) {
+            return Iterators.emptyIterator();
+        } else {
+            return list.size() == 1 ? (Iterator)list.get(0) : Iterators.concat(list.iterator());
         }
     }
 
-    public void setIteratorLimits(int p_setIteratorLimits_1_, int p_setIteratorLimits_2_, int p_setIteratorLimits_3_, int p_setIteratorLimits_4_)
-    {
-        this.minX = Math.min(p_setIteratorLimits_1_, p_setIteratorLimits_3_);
-        this.minZ = Math.min(p_setIteratorLimits_2_, p_setIteratorLimits_4_);
-        this.maxX = Math.max(p_setIteratorLimits_1_, p_setIteratorLimits_3_);
-        this.maxZ = Math.max(p_setIteratorLimits_2_, p_setIteratorLimits_4_);
+    public void setIteratorLimits(int minX, int minZ, int maxX, int maxZ) {
+        this.minX = Math.min(minX, maxX);
+        this.minZ = Math.min(minZ, maxZ);
+        this.maxX = Math.max(minX, maxX);
+        this.maxZ = Math.max(minZ, maxZ);
     }
 
-    public void clearIteratorLimits()
-    {
+    public void clearIteratorLimits() {
         this.minX = Integer.MIN_VALUE;
         this.minZ = Integer.MIN_VALUE;
         this.maxX = Integer.MIN_VALUE;

@@ -2,6 +2,8 @@ package net.optifine;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
@@ -10,91 +12,90 @@ import net.minecraft.item.ItemArmor;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 
-public class ReflectorForge
-{
-    public static void FMLClientHandler_trackBrokenTexture(ResourceLocation p_FMLClientHandler_trackBrokenTexture_0_, String p_FMLClientHandler_trackBrokenTexture_1_)
-    {
-        if (!Reflector.FMLClientHandler_trackBrokenTexture.exists())
-        {
-            Object object = Reflector.call(Reflector.FMLClientHandler_instance, new Object[0]);
-            Reflector.call(object, Reflector.FMLClientHandler_trackBrokenTexture, new Object[] {p_FMLClientHandler_trackBrokenTexture_0_, p_FMLClientHandler_trackBrokenTexture_1_});
+public class ReflectorForge {
+    public static void FMLClientHandler_trackBrokenTexture(ResourceLocation loc, String message) {
+        if (!Reflector.FMLClientHandler_trackBrokenTexture.exists()) {
+            Object object = Reflector.call(Reflector.FMLClientHandler_instance);
+            Reflector.call(object, Reflector.FMLClientHandler_trackBrokenTexture, loc, message);
         }
     }
 
-    public static void FMLClientHandler_trackMissingTexture(ResourceLocation p_FMLClientHandler_trackMissingTexture_0_)
-    {
-        if (!Reflector.FMLClientHandler_trackMissingTexture.exists())
-        {
-            Object object = Reflector.call(Reflector.FMLClientHandler_instance, new Object[0]);
-            Reflector.call(object, Reflector.FMLClientHandler_trackMissingTexture, new Object[] {p_FMLClientHandler_trackMissingTexture_0_});
+    public static void FMLClientHandler_trackMissingTexture(ResourceLocation loc) {
+        if (!Reflector.FMLClientHandler_trackMissingTexture.exists()) {
+            Object object = Reflector.call(Reflector.FMLClientHandler_instance);
+            Reflector.call(object, Reflector.FMLClientHandler_trackMissingTexture, loc);
         }
     }
 
-    public static void putLaunchBlackboard(String p_putLaunchBlackboard_0_, Object p_putLaunchBlackboard_1_)
-    {
+    public static void putLaunchBlackboard(String key, Object value) {
         Map map = (Map)Reflector.getFieldValue(Reflector.Launch_blackboard);
-
-        if (map != null)
-        {
-            map.put(p_putLaunchBlackboard_0_, p_putLaunchBlackboard_1_);
+        if (map != null) {
+            map.put(key, value);
         }
     }
 
-    public static boolean renderFirstPersonHand(RenderGlobal p_renderFirstPersonHand_0_, float p_renderFirstPersonHand_1_, int p_renderFirstPersonHand_2_)
-    {
-        return !Reflector.ForgeHooksClient_renderFirstPersonHand.exists() ? false : Reflector.callBoolean(Reflector.ForgeHooksClient_renderFirstPersonHand, new Object[] {p_renderFirstPersonHand_0_, Float.valueOf(p_renderFirstPersonHand_1_), Integer.valueOf(p_renderFirstPersonHand_2_)});
+    public static boolean renderFirstPersonHand(RenderGlobal renderGlobal, float partialTicks, int pass) {
+        return !Reflector.ForgeHooksClient_renderFirstPersonHand.exists()
+            ? false
+            : Reflector.callBoolean(Reflector.ForgeHooksClient_renderFirstPersonHand, renderGlobal, partialTicks, pass);
     }
 
-    public static InputStream getOptiFineResourceStream(String p_getOptiFineResourceStream_0_)
-    {
-        if (!Reflector.OptiFineClassTransformer_instance.exists())
-        {
+    public static InputStream getOptiFineResourceStream(String path) {
+        if (!Reflector.OptiFineClassTransformer_instance.exists()) {
             return null;
         }
-        else
-        {
-            Object object = Reflector.getFieldValue(Reflector.OptiFineClassTransformer_instance);
 
-            if (object == null)
-            {
-                return null;
-            }
-            else
-            {
-                if (p_getOptiFineResourceStream_0_.startsWith("/"))
-                {
-                    p_getOptiFineResourceStream_0_ = p_getOptiFineResourceStream_0_.substring(1);
-                }
+        Object object = Reflector.getFieldValue(Reflector.OptiFineClassTransformer_instance);
+        if (object == null) {
+            return null;
+        }
 
-                byte[] abyte = (byte[])((byte[])Reflector.call(object, Reflector.OptiFineClassTransformer_getOptiFineResource, new Object[] {p_getOptiFineResourceStream_0_}));
+        if (path.startsWith("/")) {
+            path = path.substring(1);
+        }
 
-                if (abyte == null)
-                {
-                    return null;
-                }
-                else
-                {
-                    InputStream inputstream = new ByteArrayInputStream(abyte);
-                    return inputstream;
+        byte[] abyte = (byte[])Reflector.call(object, Reflector.OptiFineClassTransformer_getOptiFineResource, path);
+        return abyte == null ? null : new ByteArrayInputStream(abyte);
+    }
+
+    public static boolean blockHasTileEntity(IBlockState state) {
+        Block block = state.getBlock();
+        return !Reflector.ForgeBlock_hasTileEntity.exists() ? block.hasTileEntity() : Reflector.callBoolean(block, Reflector.ForgeBlock_hasTileEntity, state);
+    }
+
+    public static boolean isItemDamaged(ItemStack stack) {
+        return !Reflector.ForgeItem_showDurabilityBar.exists()
+            ? stack.isItemDamaged()
+            : Reflector.callBoolean(stack.getItem(), Reflector.ForgeItem_showDurabilityBar, stack);
+    }
+
+    public static boolean armorHasOverlay(ItemArmor itemArmor, ItemStack itemStack) {
+        int i = itemArmor.getColor(itemStack);
+        return i != 16777215;
+    }
+
+    public static String[] getForgeModIds() {
+        if (!Reflector.Loader.exists()) {
+            return new String[0];
+        }
+
+        Object object = Reflector.call(Reflector.Loader_instance);
+        List list = (List)Reflector.call(object, Reflector.Loader_getActiveModList);
+        if (list == null) {
+            return new String[0];
+        }
+
+        List<String> list1 = new ArrayList<>();
+
+        for (Object object1 : list) {
+            if (Reflector.ModContainer.isInstance(object1)) {
+                String s = Reflector.callString(object1, Reflector.ModContainer_getModId);
+                if (s != null) {
+                    list1.add(s);
                 }
             }
         }
-    }
 
-    public static boolean blockHasTileEntity(IBlockState p_blockHasTileEntity_0_)
-    {
-        Block block = p_blockHasTileEntity_0_.getBlock();
-        return !Reflector.ForgeBlock_hasTileEntity.exists() ? block.hasTileEntity() : Reflector.callBoolean(block, Reflector.ForgeBlock_hasTileEntity, new Object[] {p_blockHasTileEntity_0_});
-    }
-
-    public static boolean isItemDamaged(ItemStack p_isItemDamaged_0_)
-    {
-        return !Reflector.ForgeItem_showDurabilityBar.exists() ? p_isItemDamaged_0_.isItemDamaged() : Reflector.callBoolean(p_isItemDamaged_0_.getItem(), Reflector.ForgeItem_showDurabilityBar, new Object[] {p_isItemDamaged_0_});
-    }
-
-    public static boolean armorHasOverlay(ItemArmor p_armorHasOverlay_0_, ItemStack p_armorHasOverlay_1_)
-    {
-        int i = p_armorHasOverlay_0_.getColor(p_armorHasOverlay_1_);
-        return i != 16777215;
+        return list1.toArray(new String[list1.size()]);
     }
 }

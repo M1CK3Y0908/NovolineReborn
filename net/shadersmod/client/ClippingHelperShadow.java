@@ -11,14 +11,18 @@ public class ClippingHelperShadow extends ClippingHelper {
     float[] matInvMP = new float[16];
     float[] vecIntersection = new float[4];
 
-    /**
-     * Returns true if the box is inside all 6 clipping planes, otherwise returns false.
-     */
+    @Override
     public boolean isBoxInFrustum(double x1, double y1, double z1, double x2, double y2, double z2) {
-        for (int i = 0; i < this.shadowClipPlaneCount; ++i) {
+        for (int i = 0; i < this.shadowClipPlaneCount; i++) {
             float[] afloat = this.shadowClipPlanes[i];
-
-            if (this.dot4(afloat, x1, y1, z1) <= 0.0D && this.dot4(afloat, x2, y1, z1) <= 0.0D && this.dot4(afloat, x1, y2, z1) <= 0.0D && this.dot4(afloat, x2, y2, z1) <= 0.0D && this.dot4(afloat, x1, y1, z2) <= 0.0D && this.dot4(afloat, x2, y1, z2) <= 0.0D && this.dot4(afloat, x1, y2, z2) <= 0.0D && this.dot4(afloat, x2, y2, z2) <= 0.0D) {
+            if (this.dot4(afloat, x1, y1, z1) <= 0.0
+                && this.dot4(afloat, x2, y1, z1) <= 0.0
+                && this.dot4(afloat, x1, y2, z1) <= 0.0
+                && this.dot4(afloat, x2, y2, z1) <= 0.0
+                && this.dot4(afloat, x1, y1, z2) <= 0.0
+                && this.dot4(afloat, x2, y1, z2) <= 0.0
+                && this.dot4(afloat, x1, y2, z2) <= 0.0
+                && this.dot4(afloat, x2, y2, z2) <= 0.0) {
                 return false;
             }
         }
@@ -27,11 +31,11 @@ public class ClippingHelperShadow extends ClippingHelper {
     }
 
     private double dot4(float[] plane, double x, double y, double z) {
-        return (double) plane[0] * x + (double) plane[1] * y + (double) plane[2] * z + (double) plane[3];
+        return plane[0] * x + plane[1] * y + plane[2] * z + plane[3];
     }
 
     private double dot3(float[] vecA, float[] vecB) {
-        return (double) vecA[0] * (double) vecB[0] + (double) vecA[1] * (double) vecB[1] + (double) vecA[2] * (double) vecB[2];
+        return (double)vecA[0] * vecB[0] + (double)vecA[1] * vecB[1] + (double)vecA[2] * vecB[2];
     }
 
     public static ClippingHelper getInstance() {
@@ -49,7 +53,6 @@ public class ClippingHelperShadow extends ClippingHelper {
 
     private void normalize3(float[] plane) {
         float f = MathHelper.sqrt_float(plane[0] * plane[0] + plane[1] * plane[1] + plane[2] * plane[2]);
-
         if (f == 0.0F) {
             f = 1.0F;
         }
@@ -60,7 +63,7 @@ public class ClippingHelperShadow extends ClippingHelper {
     }
 
     private void assignPlane(float[] plane, float a, float b, float c, float d) {
-        float f = (float) Math.sqrt((double) (a * a + b * b + c * c));
+        float f = (float)Math.sqrt(a * a + b * b + c * c);
         plane[0] = a / f;
         plane[1] = b / f;
         plane[2] = c / f;
@@ -85,7 +88,7 @@ public class ClippingHelperShadow extends ClippingHelper {
     }
 
     private float length(float x, float y, float z) {
-        return (float) Math.sqrt((double) (x * x + y * y + z * z));
+        return (float)Math.sqrt(x * x + y * y + z * z);
     }
 
     private float distance(float x1, float y1, float z1, float x2, float y2, float z2) {
@@ -96,16 +99,17 @@ public class ClippingHelperShadow extends ClippingHelper {
         this.cross3(this.vecIntersection, positivePlane, negativePlane);
         this.cross3(shadowPlane, this.vecIntersection, vecSun);
         this.normalize3(shadowPlane);
-        float f = (float) this.dot3(positivePlane, negativePlane);
-        float f1 = (float) this.dot3(shadowPlane, negativePlane);
-        float f2 = this.distance(shadowPlane[0], shadowPlane[1], shadowPlane[2], negativePlane[0] * f1, negativePlane[1] * f1, negativePlane[2] * f1);
-        float f3 = this.distance(positivePlane[0], positivePlane[1], positivePlane[2], negativePlane[0] * f, negativePlane[1] * f, negativePlane[2] * f);
-        float f4 = f2 / f3;
-        float f5 = (float) this.dot3(shadowPlane, positivePlane);
-        float f6 = this.distance(shadowPlane[0], shadowPlane[1], shadowPlane[2], positivePlane[0] * f5, positivePlane[1] * f5, positivePlane[2] * f5);
-        float f7 = this.distance(negativePlane[0], negativePlane[1], negativePlane[2], positivePlane[0] * f, positivePlane[1] * f, positivePlane[2] * f);
-        float f8 = f6 / f7;
-        shadowPlane[3] = positivePlane[3] * f4 + negativePlane[3] * f8;
+        float f = (float)this.dot3(positivePlane, negativePlane);
+        float f1 = f;
+        float f2 = (float)this.dot3(shadowPlane, negativePlane);
+        float f3 = this.distance(shadowPlane[0], shadowPlane[1], shadowPlane[2], negativePlane[0] * f2, negativePlane[1] * f2, negativePlane[2] * f2);
+        float f4 = this.distance(positivePlane[0], positivePlane[1], positivePlane[2], negativePlane[0] * f, negativePlane[1] * f, negativePlane[2] * f);
+        float f5 = f3 / f4;
+        float f6 = (float)this.dot3(shadowPlane, positivePlane);
+        float f7 = this.distance(shadowPlane[0], shadowPlane[1], shadowPlane[2], positivePlane[0] * f6, positivePlane[1] * f6, positivePlane[2] * f6);
+        float f8 = this.distance(negativePlane[0], negativePlane[1], negativePlane[2], positivePlane[0] * f1, positivePlane[1] * f1, positivePlane[2] * f1);
+        float f9 = f7 / f8;
+        shadowPlane[3] = positivePlane[3] * f5 + negativePlane[3] * f9;
     }
 
     public void init() {
@@ -122,17 +126,15 @@ public class ClippingHelperShadow extends ClippingHelper {
         this.assignPlane(this.frustum[4], afloat2[3] - afloat2[2], afloat2[7] - afloat2[6], afloat2[11] - afloat2[10], afloat2[15] - afloat2[14]);
         this.assignPlane(this.frustum[5], afloat2[3] + afloat2[2], afloat2[7] + afloat2[6], afloat2[11] + afloat2[10], afloat2[15] + afloat2[14]);
         float[] afloat3 = Shaders.shadowLightPositionVector;
-        float f = (float) this.dot3(this.frustum[0], afloat3);
-        float f1 = (float) this.dot3(this.frustum[1], afloat3);
-        float f2 = (float) this.dot3(this.frustum[2], afloat3);
-        float f3 = (float) this.dot3(this.frustum[3], afloat3);
-        float f4 = (float) this.dot3(this.frustum[4], afloat3);
-        float f5 = (float) this.dot3(this.frustum[5], afloat3);
+        float f = (float)this.dot3(this.frustum[0], afloat3);
+        float f1 = (float)this.dot3(this.frustum[1], afloat3);
+        float f2 = (float)this.dot3(this.frustum[2], afloat3);
+        float f3 = (float)this.dot3(this.frustum[3], afloat3);
+        float f4 = (float)this.dot3(this.frustum[4], afloat3);
+        float f5 = (float)this.dot3(this.frustum[5], afloat3);
         this.shadowClipPlaneCount = 0;
-
         if (f >= 0.0F) {
             this.copyPlane(this.shadowClipPlanes[this.shadowClipPlaneCount++], this.frustum[0]);
-
             if (f > 0.0F) {
                 if (f2 < 0.0F) {
                     this.makeShadowPlane(this.shadowClipPlanes[this.shadowClipPlaneCount++], this.frustum[0], this.frustum[2], afloat3);
@@ -154,7 +156,6 @@ public class ClippingHelperShadow extends ClippingHelper {
 
         if (f1 >= 0.0F) {
             this.copyPlane(this.shadowClipPlanes[this.shadowClipPlaneCount++], this.frustum[1]);
-
             if (f1 > 0.0F) {
                 if (f2 < 0.0F) {
                     this.makeShadowPlane(this.shadowClipPlanes[this.shadowClipPlaneCount++], this.frustum[1], this.frustum[2], afloat3);
@@ -176,7 +177,6 @@ public class ClippingHelperShadow extends ClippingHelper {
 
         if (f2 >= 0.0F) {
             this.copyPlane(this.shadowClipPlanes[this.shadowClipPlaneCount++], this.frustum[2]);
-
             if (f2 > 0.0F) {
                 if (f < 0.0F) {
                     this.makeShadowPlane(this.shadowClipPlanes[this.shadowClipPlaneCount++], this.frustum[2], this.frustum[0], afloat3);
@@ -198,7 +198,6 @@ public class ClippingHelperShadow extends ClippingHelper {
 
         if (f3 >= 0.0F) {
             this.copyPlane(this.shadowClipPlanes[this.shadowClipPlaneCount++], this.frustum[3]);
-
             if (f3 > 0.0F) {
                 if (f < 0.0F) {
                     this.makeShadowPlane(this.shadowClipPlanes[this.shadowClipPlaneCount++], this.frustum[3], this.frustum[0], afloat3);
@@ -220,7 +219,6 @@ public class ClippingHelperShadow extends ClippingHelper {
 
         if (f4 >= 0.0F) {
             this.copyPlane(this.shadowClipPlanes[this.shadowClipPlaneCount++], this.frustum[4]);
-
             if (f4 > 0.0F) {
                 if (f < 0.0F) {
                     this.makeShadowPlane(this.shadowClipPlanes[this.shadowClipPlaneCount++], this.frustum[4], this.frustum[0], afloat3);
@@ -242,7 +240,6 @@ public class ClippingHelperShadow extends ClippingHelper {
 
         if (f5 >= 0.0F) {
             this.copyPlane(this.shadowClipPlanes[this.shadowClipPlaneCount++], this.frustum[5]);
-
             if (f5 > 0.0F) {
                 if (f < 0.0F) {
                     this.makeShadowPlane(this.shadowClipPlanes[this.shadowClipPlaneCount++], this.frustum[5], this.frustum[0], afloat3);

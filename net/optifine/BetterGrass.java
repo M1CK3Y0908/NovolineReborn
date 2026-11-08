@@ -1,84 +1,243 @@
 package net.optifine;
 
-import java.util.ArrayList;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
+import java.util.Properties;
 import net.minecraft.block.Block;
+import net.minecraft.block.BlockDirt;
 import net.minecraft.block.BlockGrass;
 import net.minecraft.block.BlockMycelium;
-import net.minecraft.client.renderer.block.model.ItemCameraTransforms;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.renderer.texture.TextureMap;
 import net.minecraft.client.resources.model.IBakedModel;
-import net.minecraft.client.resources.model.SimpleBakedModel;
 import net.minecraft.init.Blocks;
 import net.minecraft.util.BlockPos;
 import net.minecraft.util.EnumFacing;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.IBlockAccess;
 
-public class BetterGrass
-{
-    private static IBakedModel modelEmpty = new SimpleBakedModel(new ArrayList(), new ArrayList(), false, false, (TextureAtlasSprite)null, (ItemCameraTransforms)null);
-    private static IBakedModel modelCubeMycelium = null;
-    private static IBakedModel modelCubeGrassSnowy = null;
+public class BetterGrass {
+    private static boolean betterGrass = true;
+    private static boolean betterMycelium = true;
+    private static boolean betterPodzol = true;
+    private static boolean betterGrassSnow = true;
+    private static boolean betterMyceliumSnow = true;
+    private static boolean betterPodzolSnow = true;
+    private static boolean grassMultilayer = false;
+    private static TextureAtlasSprite spriteGrass = null;
+    private static TextureAtlasSprite spriteGrassSide = null;
+    private static TextureAtlasSprite spriteMycelium = null;
+    private static TextureAtlasSprite spritePodzol = null;
+    private static TextureAtlasSprite spriteSnow = null;
+    private static boolean spritesLoaded = false;
     private static IBakedModel modelCubeGrass = null;
+    private static IBakedModel modelCubeMycelium = null;
+    private static IBakedModel modelCubePodzol = null;
+    private static IBakedModel modelCubeSnow = null;
+    private static boolean modelsLoaded = false;
+    private static final String TEXTURE_GRASS_DEFAULT = "blocks/grass_top";
+    private static final String TEXTURE_GRASS_SIDE_DEFAULT = "blocks/grass_side";
+    private static final String TEXTURE_MYCELIUM_DEFAULT = "blocks/mycelium_top";
+    private static final String TEXTURE_PODZOL_DEFAULT = "blocks/dirt_podzol_top";
+    private static final String TEXTURE_SNOW_DEFAULT = "blocks/snow";
 
-    public static void update()
-    {
-        modelCubeGrass = BlockModelUtils.makeModelCube((String)"minecraft:blocks/grass_top", 0);
-        modelCubeGrassSnowy = BlockModelUtils.makeModelCube((String)"minecraft:blocks/snow", -1);
-        modelCubeMycelium = BlockModelUtils.makeModelCube((String)"minecraft:blocks/mycelium_top", -1);
+    public static void updateIcons(TextureMap textureMap) {
+        spritesLoaded = false;
+        modelsLoaded = false;
+        loadProperties(textureMap);
     }
 
-    public static List getFaceQuads(IBlockAccess p_getFaceQuads_0_, Block p_getFaceQuads_1_, BlockPos p_getFaceQuads_2_, EnumFacing p_getFaceQuads_3_, List p_getFaceQuads_4_)
-    {
-        if (p_getFaceQuads_3_ != EnumFacing.UP && p_getFaceQuads_3_ != EnumFacing.DOWN)
-        {
-            if (p_getFaceQuads_1_ instanceof BlockMycelium)
-            {
-                return Config.isBetterGrassFancy() ? (getBlockAt(p_getFaceQuads_2_.down(), p_getFaceQuads_3_, p_getFaceQuads_0_) == Blocks.mycelium ? modelCubeMycelium.getFaceQuads(p_getFaceQuads_3_) : p_getFaceQuads_4_) : modelCubeMycelium.getFaceQuads(p_getFaceQuads_3_);
+    public static void update() {
+        if (spritesLoaded) {
+            modelCubeGrass = BlockModelUtils.makeModelCube(spriteGrass, 0);
+            if (grassMultilayer) {
+                IBakedModel ibakedmodel = BlockModelUtils.makeModelCube(spriteGrassSide, -1);
+                modelCubeGrass = BlockModelUtils.joinModelsCube(ibakedmodel, modelCubeGrass);
             }
-            else
-            {
-                if (p_getFaceQuads_1_ instanceof BlockGrass)
-                {
-                    Block block = p_getFaceQuads_0_.getBlockState(p_getFaceQuads_2_.up()).getBlock();
-                    boolean flag = block == Blocks.snow || block == Blocks.snow_layer;
 
-                    if (!Config.isBetterGrassFancy())
-                    {
-                        if (flag)
-                        {
-                            return modelCubeGrassSnowy.getFaceQuads(p_getFaceQuads_3_);
-                        }
+            modelCubeMycelium = BlockModelUtils.makeModelCube(spriteMycelium, -1);
+            modelCubePodzol = BlockModelUtils.makeModelCube(spritePodzol, 0);
+            modelCubeSnow = BlockModelUtils.makeModelCube(spriteSnow, -1);
+            modelsLoaded = true;
+        }
+    }
 
-                        return modelCubeGrass.getFaceQuads(p_getFaceQuads_3_);
-                    }
+    private static void loadProperties(TextureMap textureMap) {
+        betterGrass = true;
+        betterMycelium = true;
+        betterPodzol = true;
+        betterGrassSnow = true;
+        betterMyceliumSnow = true;
+        betterPodzolSnow = true;
+        spriteGrass = textureMap.registerSprite(new ResourceLocation("blocks/grass_top"));
+        spriteGrassSide = textureMap.registerSprite(new ResourceLocation("blocks/grass_side"));
+        spriteMycelium = textureMap.registerSprite(new ResourceLocation("blocks/mycelium_top"));
+        spritePodzol = textureMap.registerSprite(new ResourceLocation("blocks/dirt_podzol_top"));
+        spriteSnow = textureMap.registerSprite(new ResourceLocation("blocks/snow"));
+        spritesLoaded = true;
+        String s = "optifine/bettergrass.properties";
 
-                    if (flag)
-                    {
-                        if (getBlockAt(p_getFaceQuads_2_, p_getFaceQuads_3_, p_getFaceQuads_0_) == Blocks.snow_layer)
-                        {
-                            return modelCubeGrassSnowy.getFaceQuads(p_getFaceQuads_3_);
-                        }
-                    }
-                    else if (getBlockAt(p_getFaceQuads_2_.down(), p_getFaceQuads_3_, p_getFaceQuads_0_) == Blocks.grass)
-                    {
-                        return modelCubeGrass.getFaceQuads(p_getFaceQuads_3_);
-                    }
+        try {
+            ResourceLocation resourcelocation = new ResourceLocation(s);
+            if (!Config.hasResource(resourcelocation)) {
+                return;
+            }
+
+            InputStream inputstream = Config.getResourceStream(resourcelocation);
+            if (inputstream == null) {
+                return;
+            }
+
+            boolean flag = Config.isFromDefaultResourcePack(resourcelocation);
+            if (flag) {
+                Config.dbg("BetterGrass: Parsing default configuration " + s);
+            } else {
+                Config.dbg("BetterGrass: Parsing configuration " + s);
+            }
+
+            Properties properties = new Properties();
+            properties.load(inputstream);
+            betterGrass = getBoolean(properties, "grass", true);
+            betterMycelium = getBoolean(properties, "mycelium", true);
+            betterPodzol = getBoolean(properties, "podzol", true);
+            betterGrassSnow = getBoolean(properties, "grass.snow", true);
+            betterMyceliumSnow = getBoolean(properties, "mycelium.snow", true);
+            betterPodzolSnow = getBoolean(properties, "podzol.snow", true);
+            grassMultilayer = getBoolean(properties, "grass.multilayer", false);
+            spriteGrass = registerSprite(properties, "texture.grass", "blocks/grass_top", textureMap);
+            spriteGrassSide = registerSprite(properties, "texture.grass_side", "blocks/grass_side", textureMap);
+            spriteMycelium = registerSprite(properties, "texture.mycelium", "blocks/mycelium_top", textureMap);
+            spritePodzol = registerSprite(properties, "texture.podzol", "blocks/dirt_podzol_top", textureMap);
+            spriteSnow = registerSprite(properties, "texture.snow", "blocks/snow", textureMap);
+        } catch (IOException ioexception) {
+            Config.warn("Error reading: " + s + ", " + ioexception.getClass().getName() + ": " + ioexception.getMessage());
+        }
+    }
+
+    private static TextureAtlasSprite registerSprite(Properties props, String key, String textureDefault, TextureMap textureMap) {
+        String s = props.getProperty(key);
+        if (s == null) {
+            s = textureDefault;
+        }
+
+        ResourceLocation resourcelocation = new ResourceLocation("textures/" + s + ".png");
+        if (!Config.hasResource(resourcelocation)) {
+            Config.warn("BetterGrass texture not found: " + resourcelocation);
+            s = textureDefault;
+        }
+
+        ResourceLocation resourcelocation1 = new ResourceLocation(s);
+        return textureMap.registerSprite(resourcelocation1);
+    }
+
+    public static List getFaceQuads(IBlockAccess blockAccess, net.minecraft.block.Block block, BlockPos blockPos, EnumFacing facing, List quads) {
+        return getFaceQuads(blockAccess, block.getDefaultState(), blockPos, facing, quads);
+    }
+
+    public static List getFaceQuads(IBlockAccess blockAccess, IBlockState blockState, BlockPos blockPos, EnumFacing facing, List quads) {
+        if (facing == EnumFacing.UP || facing == EnumFacing.DOWN) {
+            return quads;
+        } else if (!modelsLoaded) {
+            return quads;
+        } else {
+            Block block = blockState.getBlock();
+            if (block instanceof BlockMycelium) {
+                return getFaceQuadsMycelium(blockAccess, blockState, blockPos, facing, quads);
+            } else if (block instanceof BlockDirt) {
+                return getFaceQuadsDirt(blockAccess, blockState, blockPos, facing, quads);
+            } else {
+                return block instanceof BlockGrass ? getFaceQuadsGrass(blockAccess, blockState, blockPos, facing, quads) : quads;
+            }
+        }
+    }
+
+    private static List getFaceQuadsMycelium(IBlockAccess blockAccess, IBlockState blockState, BlockPos blockPos, EnumFacing facing, List quads) {
+        Block block = blockAccess.getBlockState(blockPos.up()).getBlock();
+        boolean flag = block == Blocks.snow || block == Blocks.snow_layer;
+        if (Config.isBetterGrassFancy()) {
+            if (flag) {
+                if (betterMyceliumSnow && getBlockAt(blockPos, facing, blockAccess) == Blocks.snow_layer) {
+                    return getQuads(modelCubeSnow, facing);
                 }
-
-                return p_getFaceQuads_4_;
+            } else if (betterMycelium && getBlockAt(blockPos.down(), facing, blockAccess) == Blocks.mycelium) {
+                return getQuads(modelCubeMycelium, facing);
             }
+        } else if (flag) {
+            if (betterMyceliumSnow) {
+                return getQuads(modelCubeSnow, facing);
+            }
+        } else if (betterMycelium) {
+            return getQuads(modelCubeMycelium, facing);
         }
-        else
-        {
-            return p_getFaceQuads_4_;
-        }
+
+        return quads;
     }
 
-    private static Block getBlockAt(BlockPos p_getBlockAt_0_, EnumFacing p_getBlockAt_1_, IBlockAccess p_getBlockAt_2_)
-    {
-        BlockPos blockpos = p_getBlockAt_0_.offset(p_getBlockAt_1_);
-        Block block = p_getBlockAt_2_.getBlockState(blockpos).getBlock();
-        return block;
+    private static List getFaceQuadsDirt(IBlockAccess blockAccess, IBlockState blockState, BlockPos blockPos, EnumFacing facing, List quads) {
+        Block block = getBlockAt(blockPos, EnumFacing.UP, blockAccess);
+        if (blockState.getValue(BlockDirt.VARIANT) != BlockDirt.DirtType.PODZOL) {
+            return quads;
+        }
+
+        boolean flag = block == Blocks.snow || block == Blocks.snow_layer;
+        if (Config.isBetterGrassFancy()) {
+            if (flag) {
+                if (betterPodzolSnow && getBlockAt(blockPos, facing, blockAccess) == Blocks.snow_layer) {
+                    return getQuads(modelCubeSnow, facing);
+                }
+            } else if (betterPodzol) {
+                BlockPos blockpos = blockPos.down().offset(facing);
+                IBlockState iblockstate = blockAccess.getBlockState(blockpos);
+                if (iblockstate.getBlock() == Blocks.dirt && iblockstate.getValue(BlockDirt.VARIANT) == BlockDirt.DirtType.PODZOL) {
+                    return getQuads(modelCubePodzol, facing);
+                }
+            }
+        } else if (flag) {
+            if (betterPodzolSnow) {
+                return getQuads(modelCubeSnow, facing);
+            }
+        } else if (betterPodzol) {
+            return getQuads(modelCubePodzol, facing);
+        }
+
+        return quads;
+    }
+
+    private static List getFaceQuadsGrass(IBlockAccess blockAccess, IBlockState blockState, BlockPos blockPos, EnumFacing facing, List quads) {
+        Block block = blockAccess.getBlockState(blockPos.up()).getBlock();
+        boolean flag = block == Blocks.snow || block == Blocks.snow_layer;
+        if (Config.isBetterGrassFancy()) {
+            if (flag) {
+                if (betterGrassSnow && getBlockAt(blockPos, facing, blockAccess) == Blocks.snow_layer) {
+                    return getQuads(modelCubeSnow, facing);
+                }
+            } else if (betterGrass && getBlockAt(blockPos.down(), facing, blockAccess) == Blocks.grass) {
+                return getQuads(modelCubeGrass, facing);
+            }
+        } else if (flag) {
+            if (betterGrassSnow) {
+                return getQuads(modelCubeSnow, facing);
+            }
+        } else if (betterGrass) {
+            return getQuads(modelCubeGrass, facing);
+        }
+
+        return quads;
+    }
+
+    private static List getQuads(IBakedModel model, EnumFacing facing) {
+        return facing == null ? model.getGeneralQuads() : model.getFaceQuads(facing);
+    }
+
+    private static Block getBlockAt(BlockPos blockPos, EnumFacing facing, IBlockAccess blockAccess) {
+        BlockPos blockpos = blockPos.offset(facing);
+        return blockAccess.getBlockState(blockpos).getBlock();
+    }
+
+    private static boolean getBoolean(Properties props, String key, boolean def) {
+        String s = props.getProperty(key);
+        return s == null ? def : Boolean.parseBoolean(s);
     }
 }

@@ -3,40 +3,32 @@ package net.optifine;
 import net.minecraft.client.entity.AbstractClientPlayer;
 import net.minecraft.client.model.ModelBiped;
 
-public class PlayerConfiguration
-{
+public class PlayerConfiguration {
     private PlayerItemModel[] playerItemModels = new PlayerItemModel[0];
     private boolean initialized = false;
 
-    public void renderPlayerItems(ModelBiped p_renderPlayerItems_1_, AbstractClientPlayer p_renderPlayerItems_2_, float p_renderPlayerItems_3_, float p_renderPlayerItems_4_)
-    {
-        if (this.initialized)
-        {
-            for (int i = 0; i < this.playerItemModels.length; ++i)
-            {
+    public void renderPlayerItems(ModelBiped modelBiped, AbstractClientPlayer player, float scale, float partialTicks) {
+        if (this.initialized) {
+            for (int i = 0; i < this.playerItemModels.length; i++) {
                 PlayerItemModel playeritemmodel = this.playerItemModels[i];
-                playeritemmodel.render(p_renderPlayerItems_1_, p_renderPlayerItems_2_, p_renderPlayerItems_3_, p_renderPlayerItems_4_);
+                playeritemmodel.render(modelBiped, player, scale, partialTicks);
             }
         }
     }
 
-    public boolean isInitialized()
-    {
+    public boolean isInitialized() {
         return this.initialized;
     }
 
-    public void setInitialized(boolean p_setInitialized_1_)
-    {
-        this.initialized = p_setInitialized_1_;
+    public void setInitialized(boolean initialized) {
+        this.initialized = initialized;
     }
 
-    public PlayerItemModel[] getPlayerItemModels()
-    {
+    public PlayerItemModel[] getPlayerItemModels() {
         return this.playerItemModels;
     }
 
-    public void addPlayerItemModel(PlayerItemModel p_addPlayerItemModel_1_)
-    {
-        this.playerItemModels = (PlayerItemModel[])((PlayerItemModel[])Config.addObjectToArray(this.playerItemModels, p_addPlayerItemModel_1_));
+    public void addPlayerItemModel(PlayerItemModel playerItemModel) {
+        this.playerItemModels = (PlayerItemModel[])Config.addObjectToArray(this.playerItemModels, playerItemModel);
     }
 }

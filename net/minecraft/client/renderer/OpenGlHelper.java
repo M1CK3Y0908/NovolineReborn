@@ -697,6 +697,8 @@ public class OpenGlHelper {
         return !Config.isFastRender() && !Config.isAntialiasing() && framebufferSupported && Minecraft.getInstance().gameSettings.fboEnable;
     }
 
+    public static String getCpu() { return func_183029_j(); }
+
     public static String func_183029_j() {
         return field_183030_aa == null ? "32x Baikal-TX3 CPU @ 5.7GHz" : field_183030_aa;
     }

@@ -409,11 +409,21 @@ public abstract class AbstractModule {
         register(this);
         onEnable();
 
-        if (!novoline.getModuleManager().getAbstractModules().contains(this) && this != novoline.getModuleManager().getModule(ClickGUI.class)) {
-            novoline.getModuleManager().getAbstractModules().add(this);
+        if (novoline.getModuleManager().isRegistered(ClickGUI.class)) {
+            if (!novoline.getModuleManager().getAbstractModules().contains(this) && this != novoline.getModuleManager().getModule(ClickGUI.class)) {
+                novoline.getModuleManager().getAbstractModules().add(this);
+            }
+        } else {
+            if (!novoline.getModuleManager().getAbstractModules().contains(this)) {
+                novoline.getModuleManager().getAbstractModules().add(this);
+            }
         }
 
-        offsetY = novoline.getModuleManager().getModule(HUD.class).getHeight(this) - 1;
+        if (novoline.getModuleManager().isRegistered(HUD.class)) {
+            offsetY = novoline.getModuleManager().getModule(HUD.class).getHeight(this) - 1;
+        } else {
+            offsetY = 1;
+        }
         offsetX = 0;
     }
 

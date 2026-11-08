@@ -1,8 +1,27 @@
 package net.shadersmod.client;
 
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import javax.imageio.ImageIO;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GlStateManager;
-import net.minecraft.client.renderer.texture.*;
+import net.minecraft.client.renderer.texture.AbstractTexture;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.client.renderer.texture.ITextureObject;
+import net.minecraft.client.renderer.texture.LayeredTexture;
+import net.minecraft.client.renderer.texture.Stitcher;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.renderer.texture.TextureManager;
+import net.minecraft.client.renderer.texture.TextureMap;
+import net.minecraft.client.renderer.texture.TextureUtil;
 import net.minecraft.client.resources.IResource;
 import net.minecraft.client.resources.IResourceManager;
 import net.minecraft.util.ResourceLocation;
@@ -12,17 +31,6 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
 import net.shadersmod.common.SMCLog;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 public class ShadersTex {
     public static final int initialBufferSize = 1048576;
     public static ByteBuffer byteBuffer = BufferUtils.createByteBuffer(4194304);
@@ -31,7 +39,7 @@ public class ShadersTex {
     public static final int defBaseTexColor = 0;
     public static final int defNormTexColor = -8421377;
     public static final int defSpecTexColor = 0;
-    public static Map<Integer, MultiTexID> multiTexMap = new HashMap();
+    public static Map<Integer, MultiTexID> multiTexMap = new HashMap<>();
     public static TextureMap updatingTextureMap = null;
     public static TextureAtlasSprite updatingSprite = null;
     public static MultiTexID updatingTex = null;
@@ -66,23 +74,22 @@ public class ShadersTex {
 
     public static int roundUpPOT(int x) {
         int i = x - 1;
-        i = i | i >> 1;
-        i = i | i >> 2;
-        i = i | i >> 4;
-        i = i | i >> 8;
-        i = i | i >> 16;
+        i |= i >> 1;
+        i |= i >> 2;
+        i |= i >> 4;
+        i |= i >> 8;
+        i |= i >> 16;
         return i + 1;
     }
 
     public static int log2(int x) {
         int i = 0;
-
         if ((x & -65536) != 0) {
             i += 16;
             x >>= 16;
         }
 
-        if ((x & 65280) != 0) {
+        if ((x & 0xFF00) != 0) {
             i += 8;
             x >>= 8;
         }
@@ -98,7 +105,7 @@ public class ShadersTex {
         }
 
         if ((x & 2) != 0) {
-            ++i;
+            i++;
         }
 
         return i;
@@ -107,34 +114,32 @@ public class ShadersTex {
     public static IntBuffer fillIntBuffer(int size, int value) {
         int[] aint = getIntArray(size);
         IntBuffer intbuffer = getIntBuffer(size);
-        Arrays.fill((int[]) intArray, 0, size, (int) value);
+        Arrays.fill(intArray, 0, size, value);
         intBuffer.put(intArray, 0, size);
         return intBuffer;
     }
 
     public static int[] createAIntImage(int size) {
         int[] aint = new int[size * 3];
-        Arrays.fill((int[]) aint, 0, size, (int) 0);
+        Arrays.fill(aint, 0, size, 0);
         Arrays.fill(aint, size, size * 2, -8421377);
-        Arrays.fill((int[]) aint, size * 2, size * 3, (int) 0);
+        Arrays.fill(aint, size * 2, size * 3, 0);
         return aint;
     }
 
     public static int[] createAIntImage(int size, int color) {
         int[] aint = new int[size * 3];
-        Arrays.fill((int[]) aint, 0, size, (int) color);
+        Arrays.fill(aint, 0, size, color);
         Arrays.fill(aint, size, size * 2, -8421377);
-        Arrays.fill((int[]) aint, size * 2, size * 3, (int) 0);
+        Arrays.fill(aint, size * 2, size * 3, 0);
         return aint;
     }
 
     public static MultiTexID getMultiTexID(AbstractTexture tex) {
         MultiTexID multitexid = tex.multiTex;
-
         if (multitexid == null) {
             int i = tex.getGlTextureId();
-            multitexid = (MultiTexID) multiTexMap.get(i);
-
+            multitexid = multiTexMap.get(i);
             if (multitexid == null) {
                 multitexid = new MultiTexID(i, GL11.glGenTextures(), GL11.glGenTextures());
                 multiTexMap.put(i, multitexid);
@@ -148,13 +153,11 @@ public class ShadersTex {
 
     public static void deleteTextures(AbstractTexture atex, int texid) {
         MultiTexID multitexid = atex.multiTex;
-
         if (multitexid != null) {
             atex.multiTex = null;
             multiTexMap.remove(multitexid.base);
             GlStateManager.deleteTexture(multitexid.norm);
             GlStateManager.deleteTexture(multitexid.spec);
-
             if (multitexid.base != texid) {
                 SMCLog.warning("Error : MultiTexID.base mismatch: " + multitexid.base + ", texid: " + texid);
                 GlStateManager.deleteTexture(multitexid.base);
@@ -190,7 +193,6 @@ public class ShadersTex {
 
     public static void bindTextures(MultiTexID multiTex) {
         boundTex = multiTex;
-
         if (Shaders.isRenderingWorld && GlStateManager.getActiveTextureUnit() == 33984) {
             if (Shaders.configNormalMap) {
                 GlStateManager.setActiveTexture(33986);
@@ -210,26 +212,26 @@ public class ShadersTex {
 
     public static void bindTexture(ITextureObject tex) {
         int i = tex.getGlTextureId();
-
         if (tex instanceof TextureMap) {
-            Shaders.atlasSizeX = ((TextureMap) tex).atlasWidth;
-            Shaders.atlasSizeY = ((TextureMap) tex).atlasHeight;
+            Shaders.atlasSizeX = ((TextureMap)tex).atlasWidth;
+            Shaders.atlasSizeY = ((TextureMap)tex).atlasHeight;
+            bindTextures(tex.getMultiTexID());
         } else {
             Shaders.atlasSizeX = 0;
             Shaders.atlasSizeY = 0;
+            bindTextures(tex.getMultiTexID());
         }
-        bindTextures(tex.getMultiTexID());
     }
 
     public static void bindTextureMapForUpdateAndRender(TextureManager tm, ResourceLocation resLoc) {
-        TextureMap texturemap = (TextureMap) tm.getTexture(resLoc);
+        TextureMap texturemap = (TextureMap)tm.getTexture(resLoc);
         Shaders.atlasSizeX = texturemap.atlasWidth;
         Shaders.atlasSizeY = texturemap.atlasHeight;
         bindTextures(updatingTex = texturemap.getMultiTexID());
     }
 
     public static void bindTextures(int baseTex) {
-        MultiTexID multitexid = (MultiTexID) multiTexMap.get(baseTex);
+        MultiTexID multitexid = multiTexMap.get(baseTex);
         bindTextures(multitexid);
     }
 
@@ -238,7 +240,7 @@ public class ShadersTex {
         int[] aint = tex.getTextureData();
         int i = width * height;
         Arrays.fill(aint, i, i * 2, -8421377);
-        Arrays.fill((int[]) aint, i * 2, i * 3, (int) 0);
+        Arrays.fill(aint, i * 2, i * 3, 0);
         TextureUtil.allocateTexture(multitexid.base, width, height);
         TextureUtil.setTextureBlurMipmap(false, false);
         TextureUtil.setTextureClamped(false);
@@ -265,13 +267,12 @@ public class ShadersTex {
     public static void updateDynTexSubImage1(int[] src, int width, int height, int posX, int posY, int page) {
         int i = width * height;
         IntBuffer intbuffer = getIntBuffer(i);
-        intbuffer.clear();
+        ((Buffer)intbuffer).clear();
         int j = page * i;
-
         if (src.length >= j + i) {
-            intbuffer.put(src, j, i).position(0).limit(i);
-            GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, posX, posY, width, height, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, (IntBuffer) intbuffer);
-            intbuffer.clear();
+            ((Buffer)intbuffer.put(src, j, i)).position(0).limit(i);
+            GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, posX, posY, width, height, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, intbuffer);
+            ((Buffer)intbuffer).clear();
         }
     }
 
@@ -290,7 +291,6 @@ public class ShadersTex {
         MultiTexID multitexid = getMultiTexID(tex);
         updatingTex = multitexid;
         TextureUtil.allocateTextureImpl(multitexid.base, mipmapLevels, width, height);
-
         if (Shaders.configNormalMap) {
             TextureUtil.allocateTextureImpl(multitexid.norm, mipmapLevels, width, height);
         }
@@ -315,7 +315,6 @@ public class ShadersTex {
     public static void uploadTexSubForLoadAtlas(int[][] data, int width, int height, int xoffset, int yoffset, boolean linear, boolean clamp) {
         TextureUtil.uploadTextureMipmap(data, width, height, xoffset, yoffset, linear, clamp);
         boolean flag = false;
-
         if (Shaders.configNormalMap) {
             int[][] aint = readImageAndMipmaps(iconName + "_n", width, height, data.length, flag, -8421377);
             GlStateManager.bindTexture(updatingTex.norm);
@@ -333,15 +332,13 @@ public class ShadersTex {
 
     public static int[][] readImageAndMipmaps(String name, int width, int height, int numLevels, boolean border, int defColor) {
         int[][] aint = new int[numLevels][];
-        int[] aint1;
-        aint[0] = aint1 = new int[width * height];
+        int[] aint1 = new int[width * height];
+        aint[0] = aint1;
         boolean flag = false;
         BufferedImage bufferedimage = readImage(updatingTextureMap.completeResourceLocation(new ResourceLocation(name), 0));
-
         if (bufferedimage != null) {
             int i = bufferedimage.getWidth();
             int j = bufferedimage.getHeight();
-
             if (i + (border ? 16 : 0) == width) {
                 flag = true;
                 bufferedimage.getRGB(0, 0, i, i, aint1, 0, i);
@@ -353,40 +350,38 @@ public class ShadersTex {
         }
 
         GlStateManager.bindTexture(updatingTex.spec);
-        aint = genMipmapsSimple(aint.length - 1, width, aint);
-        return aint;
+        return genMipmapsSimple(aint.length - 1, width, aint);
     }
 
     public static BufferedImage readImage(ResourceLocation resLoc) {
         try {
             if (!Config.hasResource(resLoc)) {
                 return null;
-            } else {
-                InputStream inputstream = Config.getResourceStream(resLoc);
-
-                if (inputstream == null) {
-                    return null;
-                } else {
-                    BufferedImage bufferedimage = ImageIO.read(inputstream);
-                    inputstream.close();
-                    return bufferedimage;
-                }
             }
-        } catch (IOException var3) {
+
+            InputStream inputstream = Config.getResourceStream(resLoc);
+            if (inputstream == null) {
+                return null;
+            }
+
+            BufferedImage bufferedimage = ImageIO.read(inputstream);
+            inputstream.close();
+            return bufferedimage;
+        } catch (IOException ioexception) {
             return null;
         }
     }
 
     public static int[][] genMipmapsSimple(int maxLevel, int width, int[][] data) {
-        for (int i = 1; i <= maxLevel; ++i) {
+        for (int i = 1; i <= maxLevel; i++) {
             if (data[i] == null) {
                 int j = width >> i;
                 int k = j * 2;
                 int[] aint = data[i - 1];
                 int[] aint1 = data[i] = new int[j * j];
 
-                for (int i1 = 0; i1 < j; ++i1) {
-                    for (int l = 0; l < j; ++l) {
+                for (int i1 = 0; i1 < j; i1++) {
+                    for (int l = 0; l < j; l++) {
                         int j1 = i1 * 2 * k + l * 2;
                         aint1[i1 * j + l] = blend4Simple(aint[j1], aint[j1 + 1], aint[j1 + k], aint[j1 + k + 1]);
                     }
@@ -399,7 +394,6 @@ public class ShadersTex {
 
     public static void uploadTexSub(int[][] data, int width, int height, int xoffset, int yoffset, boolean linear, boolean clamp) {
         TextureUtil.uploadTextureMipmap(data, width, height, xoffset, yoffset, linear, clamp);
-
         if (Shaders.configNormalMap || Shaders.configSpecularMap) {
             if (Shaders.configNormalMap) {
                 GlStateManager.bindTexture(updatingTex.norm);
@@ -423,98 +417,102 @@ public class ShadersTex {
         int l = width;
         int i1 = height;
         int j1 = posX;
+        int k1 = posY;
 
-        for (int k1 = posY; l > 0 && i1 > 0 && k < j; ++k) {
+        while (l > 0 && i1 > 0 && k < j) {
             int l1 = l * i1;
             int[] aint = src[k];
-            intbuffer.clear();
-
+            ((Buffer)intbuffer).clear();
             if (aint.length >= l1 * (page + 1)) {
-                intbuffer.put(aint, l1 * page, l1).position(0).limit(l1);
-                GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, k, j1, k1, l, i1, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, (IntBuffer) intbuffer);
+                ((Buffer)intbuffer.put(aint, l1 * page, l1)).position(0).limit(l1);
+                GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, k, j1, k1, l, i1, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, intbuffer);
             }
 
             l >>= 1;
             i1 >>= 1;
             j1 >>= 1;
             k1 >>= 1;
+            k++;
         }
 
-        intbuffer.clear();
+        ((Buffer)intbuffer).clear();
     }
 
     public static int blend4Alpha(int c0, int c1, int c2, int c3) {
-        int i = c0 >>> 24 & 255;
-        int j = c1 >>> 24 & 255;
-        int k = c2 >>> 24 & 255;
-        int l = c3 >>> 24 & 255;
+        int i = c0 >>> 24 & 0xFF;
+        int j = c1 >>> 24 & 0xFF;
+        int k = c2 >>> 24 & 0xFF;
+        int l = c3 >>> 24 & 0xFF;
         int i1 = i + j + k + l;
         int j1 = (i1 + 2) / 4;
         int k1;
-
         if (i1 != 0) {
             k1 = i1;
         } else {
             k1 = 4;
             i = 1;
-            j = 1;
-            k = 1;
-            l = 1;
+            j = i;
+            k = j;
+            l = k;
         }
 
         int l1 = (k1 + 1) / 2;
-        int i2 = j1 << 24 | ((c0 >>> 16 & 255) * i + (c1 >>> 16 & 255) * j + (c2 >>> 16 & 255) * k + (c3 >>> 16 & 255) * l + l1) / k1 << 16 | ((c0 >>> 8 & 255) * i + (c1 >>> 8 & 255) * j + (c2 >>> 8 & 255) * k + (c3 >>> 8 & 255) * l + l1) / k1 << 8 | ((c0 >>> 0 & 255) * i + (c1 >>> 0 & 255) * j + (c2 >>> 0 & 255) * k + (c3 >>> 0 & 255) * l + l1) / k1 << 0;
-        return i2;
+        return j1 << 24
+            | ((c0 >>> 16 & 0xFF) * i + (c1 >>> 16 & 0xFF) * j + (c2 >>> 16 & 0xFF) * k + (c3 >>> 16 & 0xFF) * l + l1) / k1 << 16
+            | ((c0 >>> 8 & 0xFF) * i + (c1 >>> 8 & 0xFF) * j + (c2 >>> 8 & 0xFF) * k + (c3 >>> 8 & 0xFF) * l + l1) / k1 << 8
+            | ((c0 >>> 0 & 0xFF) * i + (c1 >>> 0 & 0xFF) * j + (c2 >>> 0 & 0xFF) * k + (c3 >>> 0 & 0xFF) * l + l1) / k1 << 0;
     }
 
     public static int blend4Simple(int c0, int c1, int c2, int c3) {
-        int i = ((c0 >>> 24 & 255) + (c1 >>> 24 & 255) + (c2 >>> 24 & 255) + (c3 >>> 24 & 255) + 2) / 4 << 24 | ((c0 >>> 16 & 255) + (c1 >>> 16 & 255) + (c2 >>> 16 & 255) + (c3 >>> 16 & 255) + 2) / 4 << 16 | ((c0 >>> 8 & 255) + (c1 >>> 8 & 255) + (c2 >>> 8 & 255) + (c3 >>> 8 & 255) + 2) / 4 << 8 | ((c0 >>> 0 & 255) + (c1 >>> 0 & 255) + (c2 >>> 0 & 255) + (c3 >>> 0 & 255) + 2) / 4 << 0;
-        return i;
+        return ((c0 >>> 24 & 0xFF) + (c1 >>> 24 & 0xFF) + (c2 >>> 24 & 0xFF) + (c3 >>> 24 & 0xFF) + 2) / 4 << 24
+            | ((c0 >>> 16 & 0xFF) + (c1 >>> 16 & 0xFF) + (c2 >>> 16 & 0xFF) + (c3 >>> 16 & 0xFF) + 2) / 4 << 16
+            | ((c0 >>> 8 & 0xFF) + (c1 >>> 8 & 0xFF) + (c2 >>> 8 & 0xFF) + (c3 >>> 8 & 0xFF) + 2) / 4 << 8
+            | ((c0 >>> 0 & 0xFF) + (c1 >>> 0 & 0xFF) + (c2 >>> 0 & 0xFF) + (c3 >>> 0 & 0xFF) + 2) / 4 << 0;
     }
 
     public static void genMipmapAlpha(int[] aint, int offset, int width, int height) {
-        Math.min(width, height);
+        int i = Math.min(width, height);
         int o2 = offset;
         int w2 = width;
         int h2 = height;
         int o1 = 0;
         int w1 = 0;
         int h1 = 0;
-        int i;
+        int j = 0;
 
-        for (i = 0; w2 > 1 && h2 > 1; o2 = o1) {
+        while (w2 > 1 && h2 > 1) {
             o1 = o2 + w2 * h2;
             w1 = w2 / 2;
             h1 = h2 / 2;
 
-            for (int l1 = 0; l1 < h1; ++l1) {
-                int i2 = o1 + l1 * w1;
-                int j2 = o2 + l1 * 2 * w2;
+            for (int i2 = 0; i2 < h1; i2++) {
+                int j2 = o1 + i2 * w1;
+                int k2 = o2 + i2 * 2 * w2;
 
-                for (int k2 = 0; k2 < w1; ++k2) {
-                    aint[i2 + k2] = blend4Alpha(aint[j2 + k2 * 2], aint[j2 + k2 * 2 + 1], aint[j2 + w2 + k2 * 2], aint[j2 + w2 + k2 * 2 + 1]);
+                for (int l2 = 0; l2 < w1; l2++) {
+                    aint[j2 + l2] = blend4Alpha(aint[k2 + l2 * 2], aint[k2 + l2 * 2 + 1], aint[k2 + w2 + l2 * 2], aint[k2 + w2 + l2 * 2 + 1]);
                 }
             }
 
-            ++i;
+            j++;
             w2 = w1;
             h2 = h1;
+            o2 = o1;
         }
 
-        while (i > 0) {
-            --i;
-            w2 = width >> i;
-            h2 = height >> i;
+        while (j > 0) {
+            w2 = width >> --j;
+            h2 = height >> j;
             o2 = o1 - w2 * h2;
-            int l2 = o2;
+            int i3 = o2;
 
-            for (int i3 = 0; i3 < h2; ++i3) {
-                for (int j3 = 0; j3 < w2; ++j3) {
-                    if (aint[l2] == 0) {
-                        aint[l2] = aint[o1 + i3 / 2 * w1 + j3 / 2] & 16777215;
+            for (int j3 = 0; j3 < h2; j3++) {
+                for (int k3 = 0; k3 < w2; k3++) {
+                    if (aint[i3] == 0) {
+                        aint[i3] = aint[o1 + j3 / 2 * w1 + k3 / 2] & 16777215;
                     }
 
-                    ++l2;
+                    i3++;
                 }
             }
 
@@ -524,48 +522,48 @@ public class ShadersTex {
     }
 
     public static void genMipmapSimple(int[] aint, int offset, int width, int height) {
-        Math.min(width, height);
+        int i = Math.min(width, height);
         int o2 = offset;
         int w2 = width;
         int h2 = height;
         int o1 = 0;
         int w1 = 0;
         int h1 = 0;
-        int i;
+        int j = 0;
 
-        for (i = 0; w2 > 1 && h2 > 1; o2 = o1) {
+        while (w2 > 1 && h2 > 1) {
             o1 = o2 + w2 * h2;
             w1 = w2 / 2;
             h1 = h2 / 2;
 
-            for (int l1 = 0; l1 < h1; ++l1) {
-                int i2 = o1 + l1 * w1;
-                int j2 = o2 + l1 * 2 * w2;
+            for (int i2 = 0; i2 < h1; i2++) {
+                int j2 = o1 + i2 * w1;
+                int k2 = o2 + i2 * 2 * w2;
 
-                for (int k2 = 0; k2 < w1; ++k2) {
-                    aint[i2 + k2] = blend4Simple(aint[j2 + k2 * 2], aint[j2 + k2 * 2 + 1], aint[j2 + w2 + k2 * 2], aint[j2 + w2 + k2 * 2 + 1]);
+                for (int l2 = 0; l2 < w1; l2++) {
+                    aint[j2 + l2] = blend4Simple(aint[k2 + l2 * 2], aint[k2 + l2 * 2 + 1], aint[k2 + w2 + l2 * 2], aint[k2 + w2 + l2 * 2 + 1]);
                 }
             }
 
-            ++i;
+            j++;
             w2 = w1;
             h2 = h1;
+            o2 = o1;
         }
 
-        while (i > 0) {
-            --i;
-            w2 = width >> i;
-            h2 = height >> i;
+        while (j > 0) {
+            w2 = width >> --j;
+            h2 = height >> j;
             o2 = o1 - w2 * h2;
-            int l2 = o2;
+            int i3 = o2;
 
-            for (int i3 = 0; i3 < h2; ++i3) {
-                for (int j3 = 0; j3 < w2; ++j3) {
-                    if (aint[l2] == 0) {
-                        aint[l2] = aint[o1 + i3 / 2 * w1 + j3 / 2] & 16777215;
+            for (int j3 = 0; j3 < h2; j3++) {
+                for (int k3 = 0; k3 < w2; k3++) {
+                    if (aint[i3] == 0) {
+                        aint[i3] = aint[o1 + j3 / 2 * w1 + k3 / 2] & 16777215;
                     }
 
-                    ++l2;
+                    i3++;
                 }
             }
 
@@ -576,20 +574,18 @@ public class ShadersTex {
 
     public static boolean isSemiTransparent(int[] aint, int width, int height) {
         int i = width * height;
-
         if (aint[0] >>> 24 == 255 && aint[i - 1] == 0) {
             return true;
-        } else {
-            for (int j = 0; j < i; ++j) {
-                int k = aint[j] >>> 24;
-
-                if (k != 0 && k != 255) {
-                    return true;
-                }
-            }
-
-            return false;
         }
+
+        for (int j = 0; j < i; j++) {
+            int k = aint[j] >>> 24;
+            if (k != 0 && k != 255) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static void updateSubTex1(int[] src, int width, int height, int posX, int posY) {
@@ -600,7 +596,7 @@ public class ShadersTex {
 
         for (int i1 = posY; j > 0 && k > 0; i1 /= 2) {
             GL11.glCopyTexSubImage2D(GL11.GL_TEXTURE_2D, i, l, i1, 0, 0, j, k);
-            ++i;
+            i++;
             j /= 2;
             k /= 2;
             l /= 2;
@@ -612,24 +608,24 @@ public class ShadersTex {
         int j = clamp ? 10496 : 10497;
         int k = width * height;
         IntBuffer intbuffer = getIntBuffer(k);
-        intbuffer.clear();
-        intbuffer.put(src, 0, k).position(0).limit(k);
+        ((Buffer)intbuffer).clear();
+        ((Buffer)intbuffer.put(src, 0, k)).position(0).limit(k);
         GlStateManager.bindTexture(multiTex.base);
-        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA, width, height, 0, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, (IntBuffer) intbuffer);
+        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA, width, height, 0, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, intbuffer);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, i);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, i);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, j);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, j);
-        intbuffer.put(src, k, k).position(0).limit(k);
+        ((Buffer)intbuffer.put(src, k, k)).position(0).limit(k);
         GlStateManager.bindTexture(multiTex.norm);
-        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA, width, height, 0, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, (IntBuffer) intbuffer);
+        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA, width, height, 0, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, intbuffer);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, i);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, i);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, j);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, j);
-        intbuffer.put(src, k * 2, k).position(0).limit(k);
+        ((Buffer)intbuffer.put(src, k * 2, k)).position(0).limit(k);
         GlStateManager.bindTexture(multiTex.spec);
-        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA, width, height, 0, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, (IntBuffer) intbuffer);
+        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA, width, height, 0, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, intbuffer);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, i);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, i);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, j);
@@ -640,20 +636,19 @@ public class ShadersTex {
     public static void updateSubImage(MultiTexID multiTex, int[] src, int width, int height, int posX, int posY, boolean linear, boolean clamp) {
         int i = width * height;
         IntBuffer intbuffer = getIntBuffer(i);
-        intbuffer.clear();
+        ((Buffer)intbuffer).clear();
         intbuffer.put(src, 0, i);
-        intbuffer.position(0).limit(i);
+        ((Buffer)intbuffer).position(0).limit(i);
         GlStateManager.bindTexture(multiTex.base);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL11.GL_REPEAT);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL11.GL_REPEAT);
-        GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, posX, posY, width, height, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, (IntBuffer) intbuffer);
-
+        GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, posX, posY, width, height, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, intbuffer);
         if (src.length == i * 3) {
-            intbuffer.clear();
-            intbuffer.put(src, i, i).position(0);
-            intbuffer.position(0).limit(i);
+            ((Buffer)intbuffer).clear();
+            ((Buffer)intbuffer.put(src, i, i)).position(0);
+            ((Buffer)intbuffer).position(0).limit(i);
         }
 
         GlStateManager.bindTexture(multiTex.norm);
@@ -661,12 +656,11 @@ public class ShadersTex {
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL11.GL_REPEAT);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL11.GL_REPEAT);
-        GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, posX, posY, width, height, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, (IntBuffer) intbuffer);
-
+        GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, posX, posY, width, height, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, intbuffer);
         if (src.length == i * 3) {
-            intbuffer.clear();
+            ((Buffer)intbuffer).clear();
             intbuffer.put(src, i * 2, i);
-            intbuffer.position(0).limit(i);
+            ((Buffer)intbuffer).position(0).limit(i);
         }
 
         GlStateManager.bindTexture(multiTex.spec);
@@ -674,7 +668,7 @@ public class ShadersTex {
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL11.GL_REPEAT);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL11.GL_REPEAT);
-        GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, posX, posY, width, height, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, (IntBuffer) intbuffer);
+        GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, posX, posY, width, height, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, intbuffer);
         GlStateManager.setActiveTexture(33984);
     }
 
@@ -701,12 +695,11 @@ public class ShadersTex {
         try {
             IResource iresource = manager.getResource(location);
             BufferedImage bufferedimage = ImageIO.read(iresource.getInputStream());
-
             if (bufferedimage != null && bufferedimage.getWidth() == width && bufferedimage.getHeight() == height) {
                 bufferedimage.getRGB(0, 0, width, height, aint, offset, width);
                 flag = true;
             }
-        } catch (IOException var10) {
+        } catch (IOException ioexception) {
         }
 
         if (!flag) {
@@ -714,7 +707,15 @@ public class ShadersTex {
         }
     }
 
-    public static int loadSimpleTexture(int textureID, BufferedImage bufferedimage, boolean linear, boolean clamp, IResourceManager resourceManager, ResourceLocation location, MultiTexID multiTex) {
+    public static int loadSimpleTexture(
+        int textureID,
+        BufferedImage bufferedimage,
+        boolean linear,
+        boolean clamp,
+        IResourceManager resourceManager,
+        ResourceLocation location,
+        MultiTexID multiTex
+    ) {
         int i = bufferedimage.getWidth();
         int j = bufferedimage.getHeight();
         int k = i * j;
@@ -730,7 +731,10 @@ public class ShadersTex {
 
     public static int blendColor(int color1, int color2, int factor1) {
         int i = 255 - factor1;
-        return ((color1 >>> 24 & 255) * factor1 + (color2 >>> 24 & 255) * i) / 255 << 24 | ((color1 >>> 16 & 255) * factor1 + (color2 >>> 16 & 255) * i) / 255 << 16 | ((color1 >>> 8 & 255) * factor1 + (color2 >>> 8 & 255) * i) / 255 << 8 | ((color1 >>> 0 & 255) * factor1 + (color2 >>> 0 & 255) * i) / 255 << 0;
+        return ((color1 >>> 24 & 0xFF) * factor1 + (color2 >>> 24 & 0xFF) * i) / 255 << 24
+            | ((color1 >>> 16 & 0xFF) * factor1 + (color2 >>> 16 & 0xFF) * i) / 255 << 16
+            | ((color1 >>> 8 & 0xFF) * factor1 + (color2 >>> 8 & 0xFF) * i) / 255 << 8
+            | ((color1 >>> 0 & 0xFF) * factor1 + (color2 >>> 0 & 0xFF) * i) / 255 << 0;
     }
 
     public static void loadLayeredTexture(LayeredTexture tex, IResourceManager manager, List list) {
@@ -739,13 +743,12 @@ public class ShadersTex {
         int k = 0;
         int[] aint = null;
 
-        for (Object s : list) {
+        for (String s : (Iterable<String>) (Iterable) list) {
             if (s != null) {
                 try {
-                    ResourceLocation resourcelocation = new ResourceLocation((String) s);
+                    ResourceLocation resourcelocation = new ResourceLocation(s);
                     InputStream inputstream = manager.getResource(resourcelocation).getInputStream();
                     BufferedImage bufferedimage = ImageIO.read(inputstream);
-
                     if (k == 0) {
                         i = bufferedimage.getWidth();
                         j = bufferedimage.getHeight();
@@ -757,8 +760,8 @@ public class ShadersTex {
                     bufferedimage.getRGB(0, 0, i, j, aint1, 0, i);
                     loadNSMap(manager, resourcelocation, i, j, aint1);
 
-                    for (int l = 0; l < k; ++l) {
-                        int i1 = aint1[l] >>> 24 & 255;
+                    for (int l = 0; l < k; l++) {
+                        int i1 = aint1[l] >>> 24 & 0xFF;
                         aint[k * 0 + l] = blendColor(aint1[k * 0 + l], aint[k * 0 + l], i1);
                         aint[k * 1 + l] = blendColor(aint1[k * 1 + l], aint[k * 1 + l], i1);
                         aint[k * 2 + l] = blendColor(aint1[k * 2 + l], aint[k * 2 + l], i1);
@@ -773,9 +776,8 @@ public class ShadersTex {
     }
 
     static void updateTextureMinMagFilter() {
-        TextureManager texturemanager = Minecraft.getInstance().getTextureManager();
+        TextureManager texturemanager = Minecraft.getMinecraft().getTextureManager();
         ITextureObject itextureobject = texturemanager.getTexture(TextureMap.locationBlocksTexture);
-
         if (itextureobject != null) {
             MultiTexID multitexid = itextureobject.getMultiTexID();
             GlStateManager.bindTexture(multitexid.base);
@@ -808,9 +810,8 @@ public class ShadersTex {
         int i = src.length;
         int[][] aint = new int[i][];
 
-        for (int j = 0; j < i; ++j) {
+        for (int j = 0; j < i; j++) {
             int[] aint1 = src[j];
-
             if (aint1 != null) {
                 int k = (width >> j) * (height >> j);
                 int[] aint2 = new int[k * 3];
@@ -819,11 +820,11 @@ public class ShadersTex {
                 int i1 = k * frameIndex;
                 int j1 = 0;
                 System.arraycopy(aint1, i1, aint2, j1, k);
-                i1 = i1 + l;
-                j1 = j1 + k;
+                i1 += l;
+                j1 += k;
                 System.arraycopy(aint1, i1, aint2, j1, k);
-                i1 = i1 + l;
-                j1 = j1 + k;
+                i1 += l;
+                j1 += k;
                 System.arraycopy(aint1, i1, aint2, j1, k);
             }
         }

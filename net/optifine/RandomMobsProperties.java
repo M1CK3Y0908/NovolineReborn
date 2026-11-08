@@ -7,175 +7,133 @@ import net.minecraft.entity.EntityLiving;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.biome.BiomeGenBase;
 
-public class RandomMobsProperties
-{
+public class RandomMobsProperties {
     public String name = null;
     public String basePath = null;
     public ResourceLocation[] resourceLocations = null;
     public RandomMobsRule[] rules = null;
 
-    public RandomMobsProperties(String p_i77_1_, ResourceLocation[] p_i77_2_)
-    {
+    public RandomMobsProperties(String path, ResourceLocation[] variants) {
         ConnectedParser connectedparser = new ConnectedParser("RandomMobs");
-        this.name = connectedparser.parseName(p_i77_1_);
-        this.basePath = connectedparser.parseBasePath(p_i77_1_);
-        this.resourceLocations = p_i77_2_;
+        this.name = connectedparser.parseName(path);
+        this.basePath = connectedparser.parseBasePath(path);
+        this.resourceLocations = variants;
     }
 
-    public RandomMobsProperties(Properties p_i78_1_, String p_i78_2_, ResourceLocation p_i78_3_)
-    {
+    public RandomMobsProperties(Properties props, String path, ResourceLocation baseResLoc) {
         ConnectedParser connectedparser = new ConnectedParser("RandomMobs");
-        this.name = connectedparser.parseName(p_i78_2_);
-        this.basePath = connectedparser.parseBasePath(p_i78_2_);
-        this.rules = this.parseRules(p_i78_1_, p_i78_3_, connectedparser);
+        this.name = connectedparser.parseName(path);
+        this.basePath = connectedparser.parseBasePath(path);
+        this.rules = this.parseRules(props, path, baseResLoc, connectedparser);
     }
 
-    public ResourceLocation getTextureLocation(ResourceLocation p_getTextureLocation_1_, EntityLiving p_getTextureLocation_2_)
-    {
-        if (this.rules != null)
-        {
-            for (int i = 0; i < this.rules.length; ++i)
-            {
+    public ResourceLocation getTextureLocation(ResourceLocation loc, EntityLiving el) {
+        if (this.rules != null) {
+            for (int i = 0; i < this.rules.length; i++) {
                 RandomMobsRule randommobsrule = this.rules[i];
-
-                if (randommobsrule.matches(p_getTextureLocation_2_))
-                {
-                    return randommobsrule.getTextureLocation(p_getTextureLocation_1_, p_getTextureLocation_2_.randomMobsId);
+                if (randommobsrule.matches(el)) {
+                    return randommobsrule.getTextureLocation(loc, el.randomMobsId);
                 }
             }
         }
 
-        if (this.resourceLocations != null)
-        {
-            int j = p_getTextureLocation_2_.randomMobsId;
+        if (this.resourceLocations != null) {
+            int j = el.randomMobsId;
             int k = j % this.resourceLocations.length;
             return this.resourceLocations[k];
-        }
-        else
-        {
-            return p_getTextureLocation_1_;
+        } else {
+            return loc;
         }
     }
 
-    private RandomMobsRule[] parseRules(Properties p_parseRules_1_, ResourceLocation p_parseRules_2_, ConnectedParser p_parseRules_3_)
-    {
+    private RandomMobsRule[] parseRules(Properties props, String path, ResourceLocation baseResLoc, ConnectedParser cp) {
         List list = new ArrayList();
-        int i = p_parseRules_1_.size();
+        int i = props.size();
 
-        for (int j = 0; j < i; ++j)
-        {
+        for (int j = 0; j < i; j++) {
             int k = j + 1;
-            String s = p_parseRules_1_.getProperty("skins." + k);
-
-            if (s != null)
-            {
-                int[] aint = p_parseRules_3_.parseIntList(s);
-                int[] aint1 = p_parseRules_3_.parseIntList(p_parseRules_1_.getProperty("weights." + k));
-                BiomeGenBase[] abiomegenbase = p_parseRules_3_.parseBiomes(p_parseRules_1_.getProperty("biomes." + k));
-                RangeListInt rangelistint = p_parseRules_3_.parseRangeListInt(p_parseRules_1_.getProperty("heights." + k));
-
-                if (rangelistint == null)
-                {
-                    rangelistint = this.parseMinMaxHeight(p_parseRules_1_, k);
+            String s = props.getProperty("skins." + k);
+            if (s != null) {
+                int[] aint = cp.parseIntList(s);
+                int[] aint1 = cp.parseIntList(props.getProperty("weights." + k));
+                BiomeGenBase[] abiomegenbase = cp.parseBiomes(props.getProperty("biomes." + k));
+                RangeListInt rangelistint = cp.parseRangeListInt(props.getProperty("heights." + k));
+                if (rangelistint == null) {
+                    rangelistint = this.parseMinMaxHeight(props, k);
                 }
 
-                RandomMobsRule randommobsrule = new RandomMobsRule(p_parseRules_2_, aint, aint1, abiomegenbase, rangelistint);
-                list.add(randommobsrule);
+                NbtTagValue nbttagvalue = cp.parseNbtTagValue("name", props.getProperty("name." + k));
+                VillagerProfession[] avillagerprofession = cp.parseProfessions(props.getProperty("professions." + k));
+                RandomMobsRule randommobsrule = new RandomMobsRule(baseResLoc, k, aint, aint1, abiomegenbase, rangelistint, nbttagvalue, avillagerprofession);
+                if (randommobsrule.isValid(path)) {
+                    list.add(randommobsrule);
+                }
             }
         }
 
-        RandomMobsRule[] arandommobsrule = (RandomMobsRule[])((RandomMobsRule[])list.toArray(new RandomMobsRule[list.size()]));
-        return arandommobsrule;
+        return ((RandomMobsRule[]) list.toArray(new RandomMobsRule[list.size()]));
     }
 
-    private RangeListInt parseMinMaxHeight(Properties p_parseMinMaxHeight_1_, int p_parseMinMaxHeight_2_)
-    {
-        String s = p_parseMinMaxHeight_1_.getProperty("minHeight." + p_parseMinMaxHeight_2_);
-        String s1 = p_parseMinMaxHeight_1_.getProperty("maxHeight." + p_parseMinMaxHeight_2_);
-
-        if (s == null && s1 == null)
-        {
+    private RangeListInt parseMinMaxHeight(Properties props, int index) {
+        String s = props.getProperty("minHeight." + index);
+        String s1 = props.getProperty("maxHeight." + index);
+        if (s == null && s1 == null) {
             return null;
         }
-        else
-        {
-            int i = 0;
 
-            if (s != null)
-            {
-                i = Config.parseInt(s, -1);
-
-                if (i < 0)
-                {
-                    Config.warn("Invalid minHeight: " + s);
-                    return null;
-                }
-            }
-
-            int j = 256;
-
-            if (s1 != null)
-            {
-                j = Config.parseInt(s1, -1);
-
-                if (j < 0)
-                {
-                    Config.warn("Invalid maxHeight: " + s1);
-                    return null;
-                }
-            }
-
-            if (j < 0)
-            {
-                Config.warn("Invalid minHeight, maxHeight: " + s + ", " + s1);
+        int i = 0;
+        if (s != null) {
+            i = Config.parseInt(s, -1);
+            if (i < 0) {
+                Config.warn("Invalid minHeight: " + s);
                 return null;
             }
-            else
-            {
-                RangeListInt rangelistint = new RangeListInt();
-                rangelistint.addRange(new RangeInt(i, j));
-                return rangelistint;
+        }
+
+        int j = 256;
+        if (s1 != null) {
+            j = Config.parseInt(s1, -1);
+            if (j < 0) {
+                Config.warn("Invalid maxHeight: " + s1);
+                return null;
             }
+        }
+
+        if (j < 0) {
+            Config.warn("Invalid minHeight, maxHeight: " + s + ", " + s1);
+            return null;
+        } else {
+            RangeListInt rangelistint = new RangeListInt();
+            rangelistint.addRange(new RangeInt(i, j));
+            return rangelistint;
         }
     }
 
-    public boolean isValid(String p_isValid_1_)
-    {
-        if (this.resourceLocations == null && this.rules == null)
-        {
-            Config.warn("No skins specified: " + p_isValid_1_);
+    public boolean isValid(String path) {
+        if (this.resourceLocations == null && this.rules == null) {
+            Config.warn("No skins specified: " + path);
             return false;
         }
-        else
-        {
-            if (this.rules != null)
-            {
-                for (int i = 0; i < this.rules.length; ++i)
-                {
-                    RandomMobsRule randommobsrule = this.rules[i];
 
-                    if (!randommobsrule.isValid(p_isValid_1_))
-                    {
-                        return false;
-                    }
+        if (this.rules != null) {
+            for (int i = 0; i < this.rules.length; i++) {
+                RandomMobsRule randommobsrule = this.rules[i];
+                if (!randommobsrule.isValid(path)) {
+                    return false;
                 }
             }
-
-            if (this.resourceLocations != null)
-            {
-                for (int j = 0; j < this.resourceLocations.length; ++j)
-                {
-                    ResourceLocation resourcelocation = this.resourceLocations[j];
-
-                    if (!Config.hasResource(resourcelocation))
-                    {
-                        Config.warn("Texture not found: " + resourcelocation.getResourcePath());
-                        return false;
-                    }
-                }
-            }
-
-            return true;
         }
+
+        if (this.resourceLocations != null) {
+            for (int j = 0; j < this.resourceLocations.length; j++) {
+                ResourceLocation resourcelocation = this.resourceLocations[j];
+                if (!Config.hasResource(resourcelocation)) {
+                    Config.warn("Texture not found: " + resourcelocation.getResourcePath());
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 }

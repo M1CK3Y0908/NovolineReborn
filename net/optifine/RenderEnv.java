@@ -1,5 +1,7 @@
 package net.optifine;
 
+import java.util.BitSet;
+import java.util.List;
 import net.minecraft.block.Block;
 import net.minecraft.block.state.BlockStateBase;
 import net.minecraft.block.state.IBlockState;
@@ -11,11 +13,7 @@ import net.minecraft.util.BlockPos;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.world.IBlockAccess;
 
-import java.util.BitSet;
-import java.util.List;
-
-public class RenderEnv
-{
+public class RenderEnv {
     public static boolean wasInitialized;
     private IBlockAccess blockAccess;
     private IBlockState blockState;
@@ -31,53 +29,41 @@ public class RenderEnv
     private boolean[] borderFlags = null;
     private static ThreadLocal threadLocalInstance = new ThreadLocal();
 
-    private RenderEnv(IBlockAccess p_i94_1_, IBlockState p_i94_2_, BlockPos p_i94_3_)
-    {
-        this.blockAccess = p_i94_1_;
-        this.blockState = p_i94_2_;
-        this.blockPos = p_i94_3_;
+    private RenderEnv(IBlockAccess blockAccess, IBlockState blockState, BlockPos blockPos) {
+        this.blockAccess = blockAccess;
+        this.blockState = blockState;
+        this.blockPos = blockPos;
         this.gameSettings = Config.getGameSettings();
     }
 
-    public static RenderEnv getInstance(IBlockAccess p_getInstance_0_, IBlockState p_getInstance_1_, BlockPos p_getInstance_2_)
-    {
+    public static RenderEnv getInstance(IBlockAccess blockAccessIn, IBlockState blockStateIn, BlockPos blockPosIn) {
         RenderEnv renderenv = (RenderEnv)threadLocalInstance.get();
-
-        if (renderenv == null)
-        {
-            renderenv = new RenderEnv(p_getInstance_0_, p_getInstance_1_, p_getInstance_2_);
+        if (renderenv == null) {
+            renderenv = new RenderEnv(blockAccessIn, blockStateIn, blockPosIn);
             threadLocalInstance.set(renderenv);
             return renderenv;
-        }
-        else
-        {
-            renderenv.reset(p_getInstance_0_, p_getInstance_1_, p_getInstance_2_);
+        } else {
+            renderenv.reset(blockAccessIn, blockStateIn, blockPosIn);
             return renderenv;
         }
     }
 
-    private void reset(IBlockAccess p_reset_1_, IBlockState p_reset_2_, BlockPos p_reset_3_)
-    {
-        this.blockAccess = p_reset_1_;
-        this.blockState = p_reset_2_;
-        this.blockPos = p_reset_3_;
+    private void reset(IBlockAccess blockAccessIn, IBlockState blockStateIn, BlockPos blockPosIn) {
+        this.blockAccess = blockAccessIn;
+        this.blockState = blockStateIn;
+        this.blockPos = blockPosIn;
         this.blockId = -1;
         this.metadata = -1;
         this.breakingAnimation = -1;
         this.boundsFlags.clear();
     }
 
-    public int getBlockId()
-    {
-        if (this.blockId < 0)
-        {
-            if (this.blockState instanceof BlockStateBase)
-            {
+    public int getBlockId() {
+        if (this.blockId < 0) {
+            if (this.blockState instanceof BlockStateBase) {
                 BlockStateBase blockstatebase = (BlockStateBase)this.blockState;
                 this.blockId = blockstatebase.getBlockId();
-            }
-            else
-            {
+            } else {
                 this.blockId = Block.getIdFromBlock(this.blockState.getBlock());
             }
         }
@@ -85,17 +71,12 @@ public class RenderEnv
         return this.blockId;
     }
 
-    public int getMetadata()
-    {
-        if (this.metadata < 0)
-        {
-            if (this.blockState instanceof BlockStateBase)
-            {
+    public int getMetadata() {
+        if (this.metadata < 0) {
+            if (this.blockState instanceof BlockStateBase) {
                 BlockStateBase blockstatebase = (BlockStateBase)this.blockState;
                 this.metadata = blockstatebase.getMetadata();
-            }
-            else
-            {
+            } else {
                 this.metadata = this.blockState.getBlock().getMetaFromState(this.blockState);
             }
         }
@@ -103,31 +84,23 @@ public class RenderEnv
         return this.metadata;
     }
 
-    public float[] getQuadBounds()
-    {
+    public float[] getQuadBounds() {
         return this.quadBounds;
     }
 
-    public BitSet getBoundsFlags()
-    {
+    public BitSet getBoundsFlags() {
         return this.boundsFlags;
     }
 
-    public BlockModelRenderer.AmbientOcclusionFace getAoFace()
-    {
+    public BlockModelRenderer.AmbientOcclusionFace getAoFace() {
         return this.aoFace;
     }
 
-    public boolean isBreakingAnimation(List p_isBreakingAnimation_1_)
-    {
-        if (this.breakingAnimation < 0 && p_isBreakingAnimation_1_.size() > 0)
-        {
-            if (p_isBreakingAnimation_1_.get(0) instanceof BreakingFour)
-            {
+    public boolean isBreakingAnimation(List listQuads) {
+        if (this.breakingAnimation < 0 && listQuads.size() > 0) {
+            if (listQuads.get(0) instanceof BreakingFour) {
                 this.breakingAnimation = 1;
-            }
-            else
-            {
+            } else {
                 this.breakingAnimation = 0;
             }
         }
@@ -135,16 +108,11 @@ public class RenderEnv
         return this.breakingAnimation == 1;
     }
 
-    public boolean isBreakingAnimation(BakedQuad p_isBreakingAnimation_1_)
-    {
-        if (this.breakingAnimation < 0)
-        {
-            if (p_isBreakingAnimation_1_ instanceof BreakingFour)
-            {
+    public boolean isBreakingAnimation(BakedQuad quad) {
+        if (this.breakingAnimation < 0) {
+            if (quad instanceof BreakingFour) {
                 this.breakingAnimation = 1;
-            }
-            else
-            {
+            } else {
                 this.breakingAnimation = 0;
             }
         }
@@ -152,30 +120,24 @@ public class RenderEnv
         return this.breakingAnimation == 1;
     }
 
-    public boolean isBreakingAnimation()
-    {
+    public boolean isBreakingAnimation() {
         return this.breakingAnimation == 1;
     }
 
-    public IBlockState getBlockState()
-    {
+    public IBlockState getBlockState() {
         return this.blockState;
     }
 
-    public BlockPosM getColorizerBlockPosM()
-    {
-        if (this.colorizerBlockPosM == null)
-        {
+    public BlockPosM getColorizerBlockPosM() {
+        if (this.colorizerBlockPosM == null) {
             this.colorizerBlockPosM = new BlockPosM(0, 0, 0);
         }
 
         return this.colorizerBlockPosM;
     }
 
-    public boolean[] getBorderFlags()
-    {
-        if (this.borderFlags == null)
-        {
+    public boolean[] getBorderFlags() {
+        if (this.borderFlags == null) {
             this.borderFlags = new boolean[4];
         }
 

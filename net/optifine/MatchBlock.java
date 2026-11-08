@@ -2,73 +2,58 @@ package net.optifine;
 
 import net.minecraft.block.state.BlockStateBase;
 
-public class MatchBlock
-{
+public class MatchBlock {
     private int blockId = -1;
     private int[] metadatas = null;
 
-    public MatchBlock(int p_i63_1_)
-    {
-        this.blockId = p_i63_1_;
+    public MatchBlock(int blockId) {
+        this.blockId = blockId;
     }
 
-    public MatchBlock(int p_i64_1_, int p_i64_2_)
-    {
-        this.blockId = p_i64_1_;
-
-        if (p_i64_2_ >= 0 && p_i64_2_ <= 15)
-        {
-            this.metadatas = new int[] {p_i64_2_};
+    public MatchBlock(int blockId, int metadata) {
+        this.blockId = blockId;
+        if (metadata >= 0 && metadata <= 15) {
+            this.metadatas = new int[]{metadata};
         }
     }
 
-    public MatchBlock(int p_i65_1_, int[] p_i65_2_)
-    {
-        this.blockId = p_i65_1_;
-        this.metadatas = p_i65_2_;
+    public MatchBlock(int blockId, int[] metadatas) {
+        this.blockId = blockId;
+        this.metadatas = metadatas;
     }
 
-    public int getBlockId()
-    {
+    public int getBlockId() {
         return this.blockId;
     }
 
-    public int[] getMetadatas()
-    {
+    public int[] getMetadatas() {
         return this.metadatas;
     }
 
-    public boolean matches(BlockStateBase p_matches_1_)
-    {
-        return p_matches_1_.getBlockId() != this.blockId ? false : Matches.metadata(p_matches_1_.getMetadata(), this.metadatas);
+    public boolean matches(BlockStateBase blockState) {
+        return blockState.getBlockId() != this.blockId ? false : Matches.metadata(blockState.getMetadata(), this.metadatas);
     }
 
-    public boolean matches(int p_matches_1_, int p_matches_2_)
-    {
-        return p_matches_1_ != this.blockId ? false : Matches.metadata(p_matches_2_, this.metadatas);
+    public boolean matches(int id, int metadata) {
+        return id != this.blockId ? false : Matches.metadata(metadata, this.metadatas);
     }
 
-    public void addMetadata(int p_addMetadata_1_)
-    {
-        if (this.metadatas != null)
-        {
-            if (p_addMetadata_1_ >= 0 && p_addMetadata_1_ <= 15)
-            {
-                for (int i = 0; i < this.metadatas.length; ++i)
-                {
-                    if (this.metadatas[i] == p_addMetadata_1_)
-                    {
+    public void addMetadata(int metadata) {
+        if (this.metadatas != null) {
+            if (metadata >= 0 && metadata <= 15) {
+                for (int i = 0; i < this.metadatas.length; i++) {
+                    if (this.metadatas[i] == metadata) {
                         return;
                     }
                 }
 
-                this.metadatas = Config.addIntToArray(this.metadatas, p_addMetadata_1_);
+                this.metadatas = Config.addIntToArray(this.metadatas, metadata);
             }
         }
     }
 
-    public String toString()
-    {
+    @Override
+    public String toString() {
         return "" + this.blockId + ":" + Config.arrayToString(this.metadatas);
     }
 }

@@ -5,9 +5,12 @@ import java.util.Arrays;
 
 public class SMath {
     static void multiplyMat4xMat4(float[] matOut, float[] matA, float[] matB) {
-        for (int i = 0; i < 4; ++i) {
-            for (int j = 0; j < 4; ++j) {
-                matOut[4 * i + j] = matA[4 * i + 0] * matB[0 + j] + matA[4 * i + 1] * matB[4 + j] + matA[4 * i + 2] * matB[8 + j] + matA[4 * i + 3] * matB[12 + j];
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                matOut[4 * i + j] = matA[4 * i + 0] * matB[0 + j]
+                    + matA[4 * i + 1] * matB[4 + j]
+                    + matA[4 * i + 2] * matB[8 + j]
+                    + matA[4 * i + 3] * matB[12 + j];
             }
         }
     }
@@ -37,9 +40,8 @@ public class SMath {
         matOut[14] = -m[0] * m[5] * m[14] + m[0] * m[6] * m[13] + m[4] * m[1] * m[14] - m[4] * m[2] * m[13] - m[12] * m[1] * m[6] + m[12] * m[2] * m[5];
         matOut[15] = m[0] * m[5] * m[10] - m[0] * m[6] * m[9] - m[4] * m[1] * m[10] + m[4] * m[2] * m[9] + m[8] * m[1] * m[6] - m[8] * m[2] * m[5];
         float f = m[0] * matOut[0] + m[1] * matOut[4] + m[2] * matOut[8] + m[3] * matOut[12];
-
-        if ((double) f != 0.0D) {
-            for (int i = 0; i < 16; ++i) {
+        if (f != 0.0) {
+            for (int i = 0; i < 16; i++) {
                 matOut[i] /= f;
             }
         } else {

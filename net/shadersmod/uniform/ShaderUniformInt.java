@@ -1,0 +1,31 @@
+package net.shadersmod.uniform;
+
+import org.lwjgl.opengl.ARBShaderObjects;
+import net.shadersmod.client.Shaders;
+
+public class ShaderUniformInt extends ShaderUniformBase {
+    private int value = -1;
+
+    public ShaderUniformInt(String name) {
+        super(name);
+    }
+
+    @Override
+    protected void onProgramChanged() {
+        this.value = -1;
+    }
+
+    public void setValue(int value) {
+        if (this.getLocation() >= 0) {
+            if (this.value != value) {
+                ARBShaderObjects.glUniform1iARB(this.getLocation(), value);
+                Shaders.checkGLError(this.getName());
+                this.value = value;
+            }
+        }
+    }
+
+    public int getValue() {
+        return this.value;
+    }
+}

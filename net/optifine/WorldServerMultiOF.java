@@ -1,5 +1,4 @@
 package net.optifine;
 
-public class WorldServerMultiOF
-{
+public class WorldServerMultiOF {
 }

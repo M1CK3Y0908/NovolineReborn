@@ -139,6 +139,12 @@ public class Initializer {
 
                 register("sprint", Sprint::new);
                 register("hud", HUD::new);
+                register("watermark", Watermark::new);
+                register("information", Information::new);
+                register("armor_hud", ArmorHUD::new);
+                register("potion_hud", PotionHUD::new);
+                register("target_list", TargetList::new);
+                register("inventory_hud", InventoryHUD::new);
                 register("click_gui", ClickGUI::new);
                 register("anti_bot", AntiBot::new);
                 //           register("no_rotate", NoRotate::new);
@@ -228,6 +234,12 @@ public class Initializer {
 
             EventManager.register(Novoline.getInstance().getModuleManager().getModule(ClickGUI.class));
             Killsults killsults = Novoline.getInstance().getModuleManager().getModule(Killsults.class);
+
+            Novoline.getInstance().getModuleManager().getModule(HUD.class).setEnabled(true);
+            Novoline.getInstance().getModuleManager().getModule(Watermark.class).setEnabled(true);
+            Novoline.getInstance().getModuleManager().getModule(Information.class).setEnabled(true);
+            Novoline.getInstance().getModuleManager().getModule(ArmorHUD.class).setEnabled(true);
+            Novoline.getInstance().getModuleManager().getModule(PotionHUD.class).setEnabled(true);
 
             if (Files.notExists(killsults.getPath())) {
                 Files.createFile(killsults.getPath());

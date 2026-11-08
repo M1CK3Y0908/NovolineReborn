@@ -6,25 +6,24 @@ import java.util.LinkedHashSet;
 import java.util.Properties;
 import java.util.Set;
 
-public class PropertiesOrdered extends Properties
-{
-    private Set<Object> keysOrdered = new LinkedHashSet();
+public class PropertiesOrdered extends Properties {
+    private Set<Object> keysOrdered = new LinkedHashSet<>();
 
-    public synchronized Object put(Object p_put_1_, Object p_put_2_)
-    {
-        this.keysOrdered.add(p_put_1_);
-        return super.put(p_put_1_, p_put_2_);
+    @Override
+    public synchronized Object put(Object key, Object value) {
+        this.keysOrdered.add(key);
+        return super.put(key, value);
     }
 
-    public Set<Object> keySet()
-    {
+    @Override
+    public Set<Object> keySet() {
         Set<Object> set = super.keySet();
         this.keysOrdered.retainAll(set);
-        return Collections.<Object>unmodifiableSet(this.keysOrdered);
+        return Collections.unmodifiableSet(this.keysOrdered);
     }
 
-    public synchronized Enumeration<Object> keys()
-    {
-        return Collections.<Object>enumeration(this.keySet());
+    @Override
+    public synchronized Enumeration<Object> keys() {
+        return Collections.enumeration(this.keySet());
     }
 }

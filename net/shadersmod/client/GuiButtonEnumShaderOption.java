@@ -4,8 +4,7 @@ import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.resources.I18n;
 
 public class GuiButtonEnumShaderOption extends GuiButton {
-
-    private EnumShaderOption enumShaderOption;
+    private EnumShaderOption enumShaderOption = null;
 
     public GuiButtonEnumShaderOption(EnumShaderOption enumShaderOption, int x, int y, int widthIn, int heightIn) {
         super(enumShaderOption.ordinal(), x, y, widthIn, heightIn, getButtonText(enumShaderOption));
@@ -16,10 +15,9 @@ public class GuiButtonEnumShaderOption extends GuiButton {
         return this.enumShaderOption;
     }
 
-    private static String getButtonText(EnumShaderOption shaderOption) {
-        String s = I18n.format(shaderOption.getResourceKey()) + ": ";
-
-        switch (shaderOption) { // @off
+    private static String getButtonText(EnumShaderOption eso) {
+        String s = I18n.format(eso.getResourceKey()) + ": ";
+        switch (eso) {
             case ANTIALIASING:
                 return s + GuiShaders.toStringAa(Shaders.configAntialiasingLevel);
             case NORMAL_MAP:
@@ -43,12 +41,11 @@ public class GuiButtonEnumShaderOption extends GuiButton {
             case TWEAK_BLOCK_DAMAGE:
                 return s + GuiShaders.toStringOnOff(Shaders.configTweakBlockDamage);
             default:
-                return s + Shaders.getEnumShaderOption(shaderOption);
-        } // @on
+                return s + Shaders.getEnumShaderOption(eso);
+        }
     }
 
     public void updateButtonText() {
         this.displayString = getButtonText(this.enumShaderOption);
     }
-
 }

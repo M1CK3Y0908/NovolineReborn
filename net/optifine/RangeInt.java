@@ -1,33 +1,28 @@
 package net.optifine;
 
-public class RangeInt
-{
+public class RangeInt {
     private int min;
     private int max;
 
-    public RangeInt(int p_i80_1_, int p_i80_2_)
-    {
-        this.min = Math.min(p_i80_1_, p_i80_2_);
-        this.max = Math.max(p_i80_1_, p_i80_2_);
+    public RangeInt(int min, int max) {
+        this.min = Math.min(min, max);
+        this.max = Math.max(min, max);
     }
 
-    public boolean isInRange(int p_isInRange_1_)
-    {
-        return p_isInRange_1_ < this.min ? false : p_isInRange_1_ <= this.max;
+    public boolean isInRange(int val) {
+        return val < this.min ? false : val <= this.max;
     }
 
-    public int getMin()
-    {
+    public int getMin() {
         return this.min;
     }
 
-    public int getMax()
-    {
+    public int getMax() {
         return this.max;
     }
 
-    public String toString()
-    {
+    @Override
+    public String toString() {
         return "min: " + this.min + ", max: " + this.max;
     }
 }

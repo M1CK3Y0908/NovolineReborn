@@ -7,41 +7,34 @@ import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.init.Blocks;
 
-public class ListQuadsOverlay
-{
-    private List<BakedQuad> listQuads = new ArrayList();
-    private List<IBlockState> listBlockStates = new ArrayList();
-    private List<BakedQuad> listQuadsSingle = Arrays.<BakedQuad>asList(new BakedQuad[1]);
+public class ListQuadsOverlay {
+    private List<BakedQuad> listQuads = new ArrayList<>();
+    private List<IBlockState> listBlockStates = new ArrayList<>();
+    private List<BakedQuad> listQuadsSingle = Arrays.asList();
 
-    public void addQuad(BakedQuad p_addQuad_1_, IBlockState p_addQuad_2_)
-    {
-        this.listQuads.add(p_addQuad_1_);
-        this.listBlockStates.add(p_addQuad_2_);
+    public void addQuad(BakedQuad quad, IBlockState blockState) {
+        this.listQuads.add(quad);
+        this.listBlockStates.add(blockState);
     }
 
-    public int size()
-    {
+    public int size() {
         return this.listQuads.size();
     }
 
-    public BakedQuad getQuad(int p_getQuad_1_)
-    {
-        return (BakedQuad)this.listQuads.get(p_getQuad_1_);
+    public BakedQuad getQuad(int index) {
+        return this.listQuads.get(index);
     }
 
-    public IBlockState getBlockState(int p_getBlockState_1_)
-    {
-        return p_getBlockState_1_ >= 0 && p_getBlockState_1_ < this.listBlockStates.size() ? (IBlockState)this.listBlockStates.get(p_getBlockState_1_) : Blocks.air.getDefaultState();
+    public IBlockState getBlockState(int index) {
+        return index >= 0 && index < this.listBlockStates.size() ? this.listBlockStates.get(index) : Blocks.air.getDefaultState();
     }
 
-    public List<BakedQuad> getListQuadsSingle(BakedQuad p_getListQuadsSingle_1_)
-    {
-        this.listQuadsSingle.set(0, p_getListQuadsSingle_1_);
+    public List<BakedQuad> getListQuadsSingle(BakedQuad quad) {
+        this.listQuadsSingle.set(0, quad);
         return this.listQuadsSingle;
     }
 
-    public void clear()
-    {
+    public void clear() {
         this.listQuads.clear();
         this.listBlockStates.clear();
     }

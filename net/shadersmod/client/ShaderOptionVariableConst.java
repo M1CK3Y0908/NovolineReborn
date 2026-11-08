@@ -1,9 +1,8 @@
 package net.shadersmod.client;
 
-import net.optifine.StrUtils;
-
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import net.optifine.StrUtils;
 
 public class ShaderOptionVariableConst extends ShaderOptionVariable {
     private String type = null;
@@ -14,46 +13,43 @@ public class ShaderOptionVariableConst extends ShaderOptionVariable {
         this.type = type;
     }
 
+    @Override
     public String getSourceLine() {
         return "const " + this.type + " " + this.getName() + " = " + this.getValue() + "; // Shader option " + this.getValue();
     }
 
+    @Override
     public boolean matchesLine(String line) {
         Matcher matcher = PATTERN_CONST.matcher(line);
-
         if (!matcher.matches()) {
             return false;
-        } else {
-            String s = matcher.group(2);
-            return s.matches(this.getName());
         }
+
+        String s = matcher.group(2);
+        return s.matches(this.getName());
     }
 
     public static ShaderOption parseOption(String line, String path) {
         Matcher matcher = PATTERN_CONST.matcher(line);
-
         if (!matcher.matches()) {
             return null;
+        }
+
+        String s = matcher.group(1);
+        String s1 = matcher.group(2);
+        String s2 = matcher.group(3);
+        String s3 = matcher.group(4);
+        String s4 = StrUtils.getSegment(s3, "[", "]");
+        if (s4 != null && s4.length() > 0) {
+            s3 = s3.replace(s4, "").trim();
+        }
+
+        String[] astring = parseValues(s2, s4);
+        if (s1 != null && s1.length() > 0) {
+            path = StrUtils.removePrefix(path, "/shaders/");
+            return new ShaderOptionVariableConst(s1, s, s3, s2, astring, path);
         } else {
-            String s = matcher.group(1);
-            String s1 = matcher.group(2);
-            String s2 = matcher.group(3);
-            String s3 = matcher.group(4);
-            String s4 = StrUtils.getSegment(s3, "[", "]");
-
-            if (s4 != null && !s4.isEmpty()) {
-                s3 = s3.replace(s4, "").trim();
-            }
-
-            String[] astring = parseValues(s2, s4);
-
-            if (s1 != null && !s1.isEmpty()) {
-                path = StrUtils.removePrefix(path, "/shaders/");
-                ShaderOption shaderoption = new ShaderOptionVariableConst(s1, s, s3, s2, astring, path);
-                return shaderoption;
-            } else {
-                return null;
-            }
+            return null;
         }
     }
 }
