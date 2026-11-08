@@ -158,6 +158,7 @@ public class Initializer {
                 register("no_slow", NoSlow::new);
                 register("speed", Speed::new);
                 register("velocity", Velocity::new);
+                register("jump_reset", JumpReset::new);
                 register("glow", ESP::new);
                 register("chams", Chams::new);
                 register("chest_esp", ChestESP::new);

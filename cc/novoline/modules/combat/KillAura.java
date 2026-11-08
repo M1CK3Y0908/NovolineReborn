@@ -1,10 +1,12 @@
 package cc.novoline.modules.combat;
 
-
 import cc.novoline.Novoline;
-import cc.novoline.events.EventManager;
 import cc.novoline.events.EventTarget;
-import cc.novoline.events.events.*;
+import cc.novoline.events.events.MotionUpdateEvent;
+import cc.novoline.events.events.PacketEvent;
+import cc.novoline.events.events.Render2DEvent;
+import cc.novoline.events.events.Render3DEvent;
+import cc.novoline.events.events.TickUpdateEvent;
 import cc.novoline.gui.screen.setting.Manager;
 import cc.novoline.gui.screen.setting.Setting;
 import cc.novoline.gui.screen.setting.SettingType;
@@ -14,675 +16,653 @@ import cc.novoline.modules.ModuleManager;
 import cc.novoline.modules.PlayerManager;
 import cc.novoline.modules.configurations.annotation.Property;
 import cc.novoline.modules.configurations.property.object.*;
-import cc.novoline.modules.exploits.Blink;
-import cc.novoline.modules.exploits.Teleport;
 import cc.novoline.modules.move.Scaffold;
-import cc.novoline.modules.player.Freecam;
+import cc.novoline.utils.BlockUtils;
+import cc.novoline.utils.MoveUtils;
+import cc.novoline.utils.PlayerUtils;
+import cc.novoline.utils.RenderUtils;
+import cc.novoline.utils.RotationUtils;
 import cc.novoline.utils.Timer;
-import cc.novoline.utils.*;
-import cc.novoline.utils.fonts.impl.Fonts;
-import cc.novoline.utils.notifications.NotificationType;
-import cc.novoline.utils.pathfinding.AStarCustomPathfinder;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import net.minecraft.block.Block;
-import net.minecraft.block.material.Material;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiChat;
 import net.minecraft.client.gui.ScaledResolution;
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.enchantment.EnchantmentHelper;
+import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.monster.EntityGolem;
 import net.minecraft.entity.monster.EntityMob;
 import net.minecraft.entity.monster.EntitySlime;
 import net.minecraft.entity.passive.EntityAnimal;
 import net.minecraft.entity.passive.EntityVillager;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.Blocks;
+import net.minecraft.entity.projectile.EntityLargeFireball;
 import net.minecraft.init.Items;
-import net.minecraft.item.ItemArmor;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemSword;
 import net.minecraft.network.Packet;
-import net.minecraft.network.play.client.*;
-import net.minecraft.network.play.server.S45PacketTitle;
+import net.minecraft.network.play.client.C02PacketUseEntity;
+import net.minecraft.network.play.client.C07PacketPlayerDigging;
+import net.minecraft.network.play.client.C08PacketPlayerBlockPlacement;
+import net.minecraft.network.play.client.C09PacketHeldItemChange;
+import net.minecraft.network.play.client.C0APacketAnimation;
+import net.minecraft.network.play.server.S12PacketEntityVelocity;
 import net.minecraft.util.*;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.lwjgl.input.Keyboard;
+import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.*;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.stream.Collectors;
 
 import static cc.novoline.gui.screen.setting.SettingType.COLOR_PICKER;
-import static cc.novoline.modules.configurations.property.object.PropertyFactory.createColor;
+import static cc.novoline.modules.PlayerManager.EnumPlayerType.FRIEND;
+import static cc.novoline.modules.PlayerManager.EnumPlayerType.TARGET;
+import static cc.novoline.modules.configurations.property.object.PropertyFactory.*;
 
 public final class KillAura extends AbstractModule {
 
+    public enum AutoBlockMode {
+        Off(false, false, false),
+        Manual(false, false, false),
+        Vanilla(false, false, false),
+        Damage(false, false, false),
+        Fake(false, false, false),
+        Interact_A(true, true, true),
+        Interact_B(true, true, true),
+        Interact_C(true, true, true),
+        Interact_D(true, true, true),
+        Swap(false, true, true),
+        Dual(true, true, false);
+
+        public final boolean interacts;
+        public final boolean packet;
+        public final boolean lags;
+
+        AutoBlockMode(boolean interacts, boolean packet, boolean lags) {
+            this.interacts = interacts;
+            this.packet = packet;
+            this.lags = lags;
+        }
+    }
+
     /* fields */
     private Entity target;
-    private int switchIndex;
-    private List<Entity> targetList = new CopyOnWriteArrayList<>();
-    private final Timer timerAttack = new Timer(), timerSwitch = new Timer(), lossTimer = new Timer();
+    private Entity previousTarget;
+    private final List<Entity> targetList = new CopyOnWriteArrayList<>();
+    private final Timer attackTimer = new Timer();
     private final Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-    private float yaw, pitch, iyaw, ipitch, prevIYaw, prevIPitch, alpha;
-    private final List<Packet<?>> toDispatch = new ArrayList<>();
-    private boolean blinking, blocking;
+
+    private float iyaw, ipitch, prevIYaw, prevIPitch;
+    private float lastClientYaw, lastClientPitch;
+    private float[] rotations;
+    private float[] interactRotations;
+    private Vec3 aimPoint;
+    private final Map<Integer, Vec3> aimPoints = new HashMap<>();
+    private final Map<UUID, Long> switchTimes = new HashMap<>();
+    private final List<Packet<?>> heldPackets = Collections.synchronizedList(new ArrayList<>());
+
+    private long attackDelay;
+    private double currentAps;
+    private boolean attackQueued;
+    private int forcedAttacks;
+    private int blockState = -1;
+    private boolean fakeBlocking;
+    private boolean serverBlocking;
+    private boolean inSwingRange;
+    private boolean attackedThisTick;
+    private boolean attacking;
+    private boolean interacting;
+    private boolean releasing;
+    private boolean returning;
+    private boolean lagging;
+    private int lagAccumulator;
+    private double dualAccumulator;
+    private int dualSwaps;
+    private long damageBlockAt;
+    private boolean passedRightClick;
 
     /* properties @off */
     @Property("mode")
-    private final StringProperty mode = PropertyFactory.createString("Switch").acceptableValues("Switch", "Single", "MW Infinite");
-    @Property("switch-delay")
-    private final FloatProperty switchDelay = PropertyFactory.createFloat(400.0F).minimum(50.0F).maximum(1000.0F);
-    @Property("rejoin")
-    private final IntProperty rejoin = PropertyFactory.createInt(3500).minimum(3100).maximum(5000);
+    private final StringProperty mode = createString("Switch").acceptableValues("Switch", "Single", "Multi");
+    @Property("sort")
+    private final StringProperty sort = createString("Distance").acceptableValues("Distance", "Health", "Hurt_time", "Yaw");
+    @Property("rotation")
+    private final StringProperty rotationMode = createString("Silent").acceptableValues("Silent", "Lock_view", "None");
+    @Property("autoblock")
+    private final StringProperty autoBlockSetting = createString("Interact_A").acceptableValues(
+            "Off", "Manual", "Vanilla", "Damage", "Fake", "Interact_A", "Interact_B", "Interact_C", "Interact_D", "Swap", "Dual"
+    );
     @Property("aps")
-    private final DoubleProperty aps = PropertyFactory.createDouble(5.0D).minimum(1.0D).maximum(18.0D);
+    private final DoubleProperty aps = createDouble(12.0D).minimum(1.0D).maximum(20.0D);
+    @Property("autoblock-aps")
+    private final DoubleProperty autoBlockAps = createDouble(10.0D).minimum(1.0D).maximum(20.0D);
+    @Property("autoblock-lag")
+    private final IntProperty autoBlockLag = createInt(0).minimum(0).maximum(100);
     @Property("range")
-    private final DoubleProperty range = PropertyFactory.createDouble(3.5D).minimum(1.0D).maximum(7.0D);
-    @Property("wall-range")
-    private final DoubleProperty wallRange = PropertyFactory.createDouble(3.5D).minimum(1.0D).maximum(7.0D);
+    private final DoubleProperty range = createDouble(3.1D).minimum(1.0D).maximum(6.0D);
+    @Property("swing-range")
+    private final DoubleProperty swingRange = createDouble(3.3D).minimum(1.0D).maximum(8.0D);
     @Property("block-range")
-    private final DoubleProperty blockRange = PropertyFactory.createDouble(3.5D).minimum(1.0D).maximum(10.0D);
-    @Property("fov-check")
-    private final IntProperty fovCheck = PropertyFactory.createInt(180).minimum(1).maximum(180);
+    private final DoubleProperty blockRange = createDouble(3.5D).minimum(1.0D).maximum(8.0D);
+    @Property("wall-range")
+    private final DoubleProperty wallRange = createDouble(3.0D).minimum(1.0D).maximum(6.0D);
+    @Property("fov")
+    private final IntProperty fov = createInt(360).minimum(30).maximum(360);
     @Property("rotations-smoothness")
-    private final IntProperty smoothness = PropertyFactory.createInt(60).minimum(1).maximum(100);
+    private final DoubleProperty smoothness = createDouble(0.0D).minimum(0.0D).maximum(10.0D);
+    @Property("switch-delay")
+    private final FloatProperty switchDelay = createFloat(300.0F).minimum(0.0F).maximum(1000.0F);
+    @Property("targets-limit")
+    private final IntProperty targetsLimit = createInt(1).minimum(1).maximum(10);
+    @Property("attack-on-damage")
+    private final IntProperty attackOnDamage = createInt(0).minimum(0).maximum(5);
+
     @Property("targets")
-    private final ListProperty<String> targets = PropertyFactory.createList("Players").acceptableValues("Players", "Animals", "Mobs", "Invisibles");
-    @Property("aura-sort")
-    private final StringProperty sort = PropertyFactory.createString("Distance").acceptableValues("Distance", "Health", "Armor", "FOV", "HurtTime");
+    private final ListProperty<String> targets = createList("Players", "Fireballs").acceptableValues("Players", "Mobs", "Animals", "Invisibles", "Fireballs");
     @Property("filters")
-    private final ListProperty<String> filters = PropertyFactory.createList("Teams").acceptableValues("Teams", "Users", "Armor");
-    @Property("particles")
-    private final ListProperty<String> particles = PropertyFactory.createList("Enchant").acceptableValues("Enchant", "Critical");
-    @Property("auto-block")
-    private final BooleanProperty autoBlock = PropertyFactory.booleanFalse();
+    private final ListProperty<String> filters = createList("Teams").acceptableValues("Teams", "Armor");
+    @Property("disable-in-inventory")
+    private final BooleanProperty disableInInventory = booleanTrue();
+    @Property("disable-while-blocking")
+    private final BooleanProperty disableWhileBlocking = booleanFalse();
+    @Property("disable-while-mining")
+    private final BooleanProperty disableWhileMining = booleanFalse();
+    @Property("disable-sprint-midair")
+    private final BooleanProperty disableSprintMidair = booleanFalse();
+    @Property("hit-through-blocks")
+    private final BooleanProperty hitThroughBlocks = booleanFalse();
+    @Property("ignore-teammates")
+    private final BooleanProperty ignoreTeammates = booleanTrue();
+    @Property("manual-block")
+    private final BooleanProperty manualBlock = booleanFalse();
+    @Property("prioritize-enemies")
+    private final BooleanProperty prioritizeEnemies = booleanFalse();
+    @Property("require-mouse-down")
+    private final BooleanProperty requireMouseDown = booleanFalse();
+    @Property("silent-swing")
+    private final BooleanProperty silentSwing = booleanFalse();
+    @Property("weapon-only")
+    private final BooleanProperty weaponOnly = booleanFalse();
+
     @Property("target-hud")
-    private final BooleanProperty targetHud = PropertyFactory.booleanFalse();
-    @Property("autodisable")
-    private final ListProperty<String> autoDisable = PropertyFactory.createList("Death").acceptableValues("World Change", "Game End", "Death");
-    @Property("blink")
-    private final BooleanProperty blink = PropertyFactory.booleanFalse();
-    @Property("raytrace")
-    private final BooleanProperty raytrace = PropertyFactory.booleanFalse();
-    @Property("lag-check")
-    private final BooleanProperty lagCheck = PropertyFactory.booleanFalse();
+    private final BooleanProperty targetHud = booleanTrue();
     @Property("visualize-range")
-    private final BooleanProperty visRange = PropertyFactory.booleanFalse();
+    private final BooleanProperty visRange = booleanFalse();
     @Property("color")
     private final ColorProperty color = createColor(0xFFFFFFFF);
     @Property("th-x")
-    private final IntProperty thx = PropertyFactory.createInt((int) screenSize.getWidth() / 4).minimum(1).maximum((int) screenSize.getWidth() / 2);
+    private final IntProperty thx = createInt((int) screenSize.getWidth() / 4).minimum(1).maximum((int) screenSize.getWidth() / 2);
     @Property("th-y")
-    private final IntProperty thy = PropertyFactory.createInt((int) screenSize.getHeight() / 4).minimum(1).maximum((int) screenSize.getHeight() / 2);
-    //  @Property("hvh")
-    //  private final KeyBindProperty hvh = PropertyFactory.keyboardKeyBinding(Keyboard.KEY_N);
+    private final IntProperty thy = createInt((int) screenSize.getHeight() / 4).minimum(1).maximum((int) screenSize.getHeight() / 2);
+    @Property("autodisable")
+    private final ListProperty<String> autoDisable = createList("Death").acceptableValues("World Change", "Game End", "Death");
+    /* properties @on */
 
-
-    /* constructors @on */
     public KillAura(@NonNull ModuleManager moduleManager) {
-        super(moduleManager, "Killaura", "Kill Aura", EnumModuleType.COMBAT, "Automatically attacks entities around you");
+        super(moduleManager, "Killaura", "Kill Aura", Keyboard.KEY_R, EnumModuleType.COMBAT, "Automatically attacks entities with RavenXD mechanics");
         Manager.put(new Setting("AURA_MODE", "Mode", SettingType.COMBOBOX, this, mode));
-        Manager.put(new Setting("AURA_SORT", "Sort by", SettingType.COMBOBOX, this, sort, () -> mode().equalsIgnoreCase("Single") || mode.equalsIgnoreCase("MW Infinite")));
-        Manager.put(new Setting("AURA_REJOIN_DELAY", "Rejoin Delay", SettingType.SLIDER, this, rejoin, 100, () -> mode.get().equals("MW Infinite")));
-        Manager.put(new Setting("SWITCH_DELAY", "Switch Delay", SettingType.SLIDER, this, switchDelay, 50, () -> mode().equalsIgnoreCase("Switch")));
-        Manager.put(new Setting("APS", "APS", SettingType.SLIDER, this, aps, 1.0D));
-        Manager.put(new Setting("RANGE", "Range", SettingType.SLIDER, this, range, 0.1));
-        Manager.put(new Setting("BLOCK_RANGE", "Block Range", SettingType.SLIDER, this, blockRange, 0.1));
-        Manager.put(new Setting("WALL_RANGE", "Wall Range", SettingType.SLIDER, this, wallRange, 0.1));
-        Manager.put(new Setting("AURA_FOV", "FOV Check", SettingType.SLIDER, this, fovCheck, 1));
-        Manager.put(new Setting("AURA_FOV", "Angle Smoothing", SettingType.SLIDER, this, smoothness, 5));
+        Manager.put(new Setting("AURA_SORT", "Sort by", SettingType.COMBOBOX, this, sort));
+        Manager.put(new Setting("AURA_ROTATION", "Rotation", SettingType.COMBOBOX, this, rotationMode));
+        Manager.put(new Setting("AUTOBLOCK", "AutoBlock", SettingType.COMBOBOX, this, autoBlockSetting));
+        Manager.put(new Setting("APS", "APS", SettingType.SLIDER, this, aps, 0.5D));
+        Manager.put(new Setting("AB_APS", "AutoBlock APS", SettingType.SLIDER, this, autoBlockAps, 0.5D));
+        Manager.put(new Setting("AB_LAG", "AutoBlock Lag", SettingType.SLIDER, this, autoBlockLag, 5));
+        Manager.put(new Setting("RANGE", "Attack Range", SettingType.SLIDER, this, range, 0.1D));
+        Manager.put(new Setting("SWING_RANGE", "Swing Range", SettingType.SLIDER, this, swingRange, 0.1D));
+        Manager.put(new Setting("BLOCK_RANGE", "Block Range", SettingType.SLIDER, this, blockRange, 0.1D));
+        Manager.put(new Setting("WALL_RANGE", "Wall Range", SettingType.SLIDER, this, wallRange, 0.1D));
+        Manager.put(new Setting("AURA_FOV", "FOV", SettingType.SLIDER, this, fov, 5));
+        Manager.put(new Setting("AURA_SMOOTH", "Smoothing", SettingType.SLIDER, this, smoothness, 0.5D));
+        Manager.put(new Setting("SWITCH_DELAY", "Switch Delay", SettingType.SLIDER, this, switchDelay, 25.0F));
+        Manager.put(new Setting("TARGETS_LIMIT", "Targets Limit", SettingType.SLIDER, this, targetsLimit, 1));
+        Manager.put(new Setting("ATTACK_ON_DMG", "Attack On Damage", SettingType.SLIDER, this, attackOnDamage, 1));
+
         Manager.put(new Setting("TARGETS", "Targets", SettingType.SELECTBOX, this, targets));
         Manager.put(new Setting("KA_FILTER", "Filters", SettingType.SELECTBOX, this, filters));
-        Manager.put(new Setting("KA_PARTICLES", "Particles", SettingType.SELECTBOX, this, particles));
-        Manager.put(new Setting("KA_LAG_CHECK", "Lag Check", SettingType.CHECKBOX, this, lagCheck));
-        Manager.put(new Setting("KA_RAY_TRACE", "Ray Trace", SettingType.CHECKBOX, this, raytrace));
+        Manager.put(new Setting("DIS_IN_INV", "Disable In Inventory", SettingType.CHECKBOX, this, disableInInventory));
+        Manager.put(new Setting("DIS_WHILE_BLOCKING", "Disable While Blocking", SettingType.CHECKBOX, this, disableWhileBlocking));
+        Manager.put(new Setting("DIS_WHILE_MINING", "Disable While Mining", SettingType.CHECKBOX, this, disableWhileMining));
+        Manager.put(new Setting("DIS_SPRINT_MIDAIR", "Disable Sprint Midair", SettingType.CHECKBOX, this, disableSprintMidair));
+        Manager.put(new Setting("HIT_THROUGH_BLOCKS", "Hit Through Blocks", SettingType.CHECKBOX, this, hitThroughBlocks));
+        Manager.put(new Setting("IGNORE_TEAMMATES", "Ignore Teammates", SettingType.CHECKBOX, this, ignoreTeammates));
+        Manager.put(new Setting("MANUAL_BLOCK", "Manual Block", SettingType.CHECKBOX, this, manualBlock));
+        Manager.put(new Setting("PRIORITIZE_ENEMIES", "Prioritize Enemies", SettingType.CHECKBOX, this, prioritizeEnemies));
+        Manager.put(new Setting("REQ_MOUSE_DOWN", "Require Mouse Down", SettingType.CHECKBOX, this, requireMouseDown));
+        Manager.put(new Setting("SILENT_SWING", "Silent Swing", SettingType.CHECKBOX, this, silentSwing));
+        Manager.put(new Setting("WEAPON_ONLY", "Weapon Only", SettingType.CHECKBOX, this, weaponOnly));
+
+        Manager.put(new Setting("TAR_HUD", "Target HUD", SettingType.CHECKBOX, this, targetHud));
         Manager.put(new Setting("KA_VIS_RANGE", "Visualize Range", SettingType.CHECKBOX, this, visRange));
         Manager.put(new Setting("KA_RANGE_COLOR", "Range Color", COLOR_PICKER, this, color, null, visRange::get));
-        Manager.put(new Setting("KA_BLINK", "Blink", SettingType.CHECKBOX, this, blink));
-        Manager.put(new Setting("AUTOBLOCK", "AutoBlock", SettingType.CHECKBOX, this, autoBlock));
-        Manager.put(new Setting("TAR_HUD", "Target HUD", SettingType.CHECKBOX, this, targetHud));
         Manager.put(new Setting("KADISABLE", "Disable On", SettingType.SELECTBOX, this, autoDisable));
-        //  Manager.put(new Setting("KA_HVH", "HVH preset", SettingType.BINDABLE, this, hvh));
     }
 
-    //methods
-    @Override
-    public void onDisable() {
-        yaw = iyaw = mc.player.rotationYaw;
-        pitch = ipitch = mc.player.rotationPitch;
-        target = null;
-        targetList.clear();
-        dispatchPackets();
+    public AutoBlockMode getAutoBlockMode() {
+        try {
+            return AutoBlockMode.valueOf(autoBlockSetting.get());
+        } catch (Exception e) {
+            return AutoBlockMode.Off;
+        }
     }
 
     @Override
     public void onEnable() {
         setSuffix(mode.get());
-        alpha = 0;
         iyaw = mc.player.rotationYaw;
         ipitch = mc.player.rotationPitch;
-        lossTimer.reset();
+        prevIYaw = iyaw;
+        prevIPitch = ipitch;
+        lastClientYaw = iyaw;
+        lastClientPitch = ipitch;
+        target = null;
+        previousTarget = null;
+        targetList.clear();
+        attackTimer.reset();
+        setDelay(true);
+        blockState = -1;
+        fakeBlocking = false;
+        serverBlocking = false;
+        returning = false;
+        rotations = null;
+        interactRotations = null;
+        heldPackets.clear();
+    }
 
-        if (blink.get()) {
-            toDispatch.clear();
-            blinking = true;
-        } else {
-            blinking = false;
+    @Override
+    public void onDisable() {
+        if (getAutoBlockMode() != AutoBlockMode.Manual && !isRightDown() && mc.player.isUsingItem()) {
+            setBlocking(false, false);
+        }
+        if (blockState != -1) {
+            releaseFlow(blockState);
+            blockState = -1;
+        }
+        fakeBlocking = false;
+        serverBlocking = false;
+        returning = false;
+        attackedThisTick = false;
+        inSwingRange = false;
+        attackQueued = false;
+        target = null;
+        previousTarget = null;
+        targetList.clear();
+        interactRotations = null;
+        rotations = null;
+        aimPoint = null;
+        aimPoints.clear();
+        switchTimes.clear();
+        dualSwaps = 0;
+        forcedAttacks = 0;
+        releaseHeldPackets(true);
+    }
+
+    @EventTarget
+    public void onMotion(MotionUpdateEvent event) {
+        if (event.getState() == MotionUpdateEvent.State.PRE) {
+            updatePreMotion(event);
+        } else if (event.getState() == MotionUpdateEvent.State.POST) {
+            updatePostMotion();
         }
     }
 
-    private boolean hasArmor(@NonNull EntityPlayer e) {
-        return e.inventory.armorInventory[0] != null || e.inventory.armorInventory[1] != null || e.inventory.armorInventory[2] != null || e.inventory.armorInventory[3] != null;
-    }
+    private void updatePreMotion(MotionUpdateEvent event) {
+        if (interactRotations != null) {
+            applyRotations(interactRotations, event);
+            interactRotations = null;
+            return;
+        }
 
-    private boolean heldSword() {
-        return mc.player.getHeldItem() != null && mc.player.getHeldItem().getItem() instanceof ItemSword;
-    }
+        findTarget();
+        updateAps();
 
-    private boolean isInFOV() {
+        boolean canAttack = exists(target);
+        if (disableInInventory.get() && mc.currentScreen != null) {
+            canAttack = false;
+        }
+
         if (target != null) {
-            float[] rotationPosition = RotationUtil.getAngles((EntityLivingBase) target);
-            int pitchByPos = (int) rotationPosition[1], yawByPos = (int) rotationPosition[0], yaw = (int) mc.player.rotationYaw,
-                    pitch = (int) mc.player.rotationPitch, differenceYaw = Math.abs(yaw - yawByPos), differencePitch = Math.abs(pitch - pitchByPos);
-
-            return differenceYaw <= fovCheck.get() && differencePitch <= fovCheck.get();
-        }
-
-        return false;
-    }
-
-    public boolean serverLag() {
-        return lagCheck.get() && lossTimer.getLastDelay() >= 100;
-    }
-
-    public boolean shouldAttack() {
-        return target != null && target.isEntityAlive() && mc.player.getDistanceToEntity(target) <=
-                (mc.player.canEntityBeSeen(target) ? range() : wallRange()) && isInFOV() && !isEnabled(Scaffold.class);
-    }
-
-    public boolean shouldRotate() {
-        return shouldAttack() && !serverLag() && !isEnabled(Scaffold.class) && !mc.playerController.isBreakingBlock();
-    }
-
-    public boolean shouldBlock() {
-        return autoBlock.get() && target != null && heldSword() && target.isEntityAlive() && isEnabled() && !mc.playerController.isBreakingBlock() &&
-                mc.player.getDistanceToEntity(target) <= (mc.player.canEntityBeSeen(target) ? blockRange() : wallRange()) && !isEnabled(Scaffold.class);
-    }
-
-    private boolean isAutismShopKeeperCheck(Entity target) {
-        IChatComponent component = target.getDisplayName();
-        String formatted = component.getFormattedText();
-        String unFormatted = component.getUnformattedText();
-        boolean first = !formatted.substring(0, formatted.length() - 2).contains("\u00A7");
-        boolean second = formatted.substring(formatted.length() - 2).contains("\u00A7");
-        return ServerUtils.isHypixel() && ServerUtils.serverIs(Servers.BW) && first && second;
-    }
-
-    private double getYawDifference(Entity e) {
-        final float[] rotationPosition = RotationUtil.getAngles((EntityLivingBase) e);
-        final float yaw = (int) rotationPosition[0], differenceYaw;
-        differenceYaw = mc.player.rotationYaw > yaw ? mc.player.rotationYaw - yaw : yaw - mc.player.rotationYaw;
-        return differenceYaw;
-    }
-
-    private boolean goBack;
-    private Timer swapLobbyStopwatch = new Timer();
-
-    @EventTarget
-    public void onLoadWorld(LoadWorldEvent event) {
-        if (goBack) {
-            sendPacketNoEvent(new C01PacketChatMessage("/back"));
-            goBack = false;
-        }
-    }
-
-    @EventTarget
-    public void targetSwitching(MotionUpdateEvent e) {
-        if (e.getState().equals(MotionUpdateEvent.State.PRE)) {
-
-            if (mode.get().equals("MW Infinite")) {
-                if (swapLobbyStopwatch.delay(rejoin.get())) {
-                    sendPacketNoEvent(new C01PacketChatMessage("/hub"));
-                    goBack = true;
-                    swapLobbyStopwatch.reset();
+            if (inSwingRange) {
+                updateRotations();
+                applyRotations(rotations, event);
+                if (smoothness.get() > 0.0) {
+                    lastClientYaw = mc.player.rotationYaw;
+                    lastClientPitch = mc.player.rotationPitch;
+                    returning = true;
                 }
             }
 
-            double clamp = MathHelper.clamp_double(mc.getDebugFPS() / 30, 1, 9999);
-
-            if (alpha < 1) {
-                alpha = (float) (alpha + (1 - alpha) * (0.99F / clamp));
-            }
-
-            alpha = MathHelper.clamp_float(alpha, 0, 1);
-
-            if (mc.player.inventory.getStackInSlot(0) != null) {
-                if (mc.player.inventory.getStackInSlot(0).getItem() == Items.compass) {
-                    if (mc.player.inventory.getStackInSlot(0).getDisplayName().contains("Teleporter")) {
-                        target = null;
+            AutoBlockMode ab = getAutoBlockMode();
+            if (ab.packet) {
+                if (!blockAllowed() || !PlayerUtils.holdingSword()) {
+                    if (blockState != -1) {
+                        releaseFlow(blockState);
+                        blockState = -1;
+                        fakeBlocking = false;
+                        serverBlocking = false;
+                        canAttack = false;
                     }
-                }
-            }
-
-            if (targetsInRange() > 0) {
-                targetList = getTargetsFromRange();
-            } else {
-                targetList = getEntityList(sort.get());
-            }
-
-            if (target != null && !target.isEntityAlive()) {
-                target = null;
-            }
-
-            if (targetList != null) {
-                if (timerSwitch.delay(switchDelay.get())) {
-                    switchAndReset();
-                }
-
-                if (!isContainsTarget(mode().equalsIgnoreCase("Switch"))) {
-                    if (target != null) {
-                        if (mc.player.getDistanceToEntity(target) > range() && targetsInRange() > 0) {
-                            target = getTargetFromRange();
-                        } else if (mc.player.getDistanceToEntity(target) > blockRange()) {
-                            target = null;
-                            switchAndReset();
-                        } else if (!target.isEntityAlive() && ((EntityLivingBase) target).getHealth() <= 0) {
-                            target = null;
-                            switchAndReset();
-                        } else if (mode().equalsIgnoreCase("Switch")) {
-                            target = targetList.get(switchIndex);
-                        }
-
-                    } else {
-                        target = targetList.get(mode().equalsIgnoreCase("Switch") ? switchIndex : 0);
-                    }
-
                 } else {
-                    for (Entity entity : targetList) {
-                        if (novoline.getPlayerManager().hasType(entity.getName(), PlayerManager.EnumPlayerType.TARGET)) {
-                            target = entity;
-                        }
-                    }
+                    handlePacketAutoBlockPre(ab);
                 }
             }
+        } else if (returning) {
+            returning = smoothReturn(event);
+        }
 
-            prevIPitch = ipitch;
-            prevIYaw = iyaw;
+        if (forcedAttacks > 0) {
+            --forcedAttacks;
+            attackQueued = true;
+        }
+
+        if (attackTimer.delay(attackDelay)) {
+            attackTimer.reset();
+            setDelay(false);
+            if (target != null) {
+                if (!(disableSprintMidair.get() && !mc.player.onGround && mc.player.isSprinting())) {
+                    attackQueued = true;
+                }
+            }
+        }
+
+        if (attackQueued && canAttack) {
+            attackQueued = false;
+            executeAttack();
         }
     }
 
-    public float getPrevIPitch() {
-        return prevIPitch;
+    private void updatePostMotion() {
+        if (target != null) {
+            if (inSwingRange && rotationMode.get().equalsIgnoreCase("Lock_view") && rotations != null) {
+                mc.player.rotationYaw = rotations[0];
+                mc.player.rotationPitch = rotations[1];
+            }
+            if (blockAllowed() && !getAutoBlockMode().packet) {
+                AutoBlockMode ab = getAutoBlockMode();
+                switch (ab) {
+                    case Vanilla:
+                        setBlocking(true, false);
+                        break;
+                    case Damage:
+                        if (System.currentTimeMillis() - damageBlockAt < 800L) {
+                            setBlocking(true, false);
+                        } else if (!isRightDown()) {
+                            setBlocking(false, false);
+                        }
+                        break;
+                    case Fake:
+                        fakeBlocking = true;
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+        attackedThisTick = false;
     }
 
-    public float getPrevIYaw() {
-        return prevIYaw;
-    }
+    private void executeAttack() {
+        Entity entity = target;
+        boolean inReach = false;
+        float[] currentRot = rotations != null ? rotations : new float[]{mc.player.rotationYaw, mc.player.rotationPitch};
 
-    private void switchAndReset() {
-        switchIndex = (switchIndex + 1) % targetList.size();
-        timerSwitch.reset();
-    }
+        if (inSwingRange) {
+            boolean sameRange = range.get().equals(swingRange.get());
+            inReach = (sameRange && smoothness.get() == 0.0) || RotationUtils.rayHits(entity, currentRot[0], currentRot[1], range.get());
+        }
 
-    private boolean rayTraycing(Entity target) {
-        return !raytrace.get() || novoline.getPlayerManager().hasType(target.getName(), PlayerManager.EnumPlayerType.TARGET) || getPosition() != null || mc.playerController.isBreakingBlock();
-    }
+        if (inSwingRange) {
+            boolean attack = inReach;
+            boolean swing = true;
+            boolean silent = silentSwing.get();
 
-    private void attackEntity(Entity target) {
-        if (timerAttack.delay(1000L / aps.get().longValue())) {
-            EventManager.call(new AttackEvent());
-            ArrayList<cc.novoline.utils.pathfinding.Vec3> vec3s = computePath(new cc.novoline.utils.pathfinding.Vec3(mc.player.posX, mc.player.posY, mc.player.posZ), new cc.novoline.utils.pathfinding.Vec3(target.posX, target.posY, target.posZ));
+            if (disableWhileBlocking.get() && PlayerUtils.holdingSword() && mc.player.isBlocking()) {
+                swing = false;
+                attack = false;
+            }
 
-            if (mode.equals("MW Infinite")) {
-                for (cc.novoline.utils.pathfinding.Vec3 vec3 : vec3s) {
-                    sendPacketNoEvent(new C03PacketPlayer.C04PacketPlayerPosition(vec3.getX(), vec3.getY(), vec3.getZ(), true));
-                    sendPacketNoEvent(new C03PacketPlayer(true));
+            if (attack) {
+                attackedThisTick = true;
+                attacking = true;
+                if (!silent) {
+                    mc.player.swingItem();
+                } else {
+                    sendPacketNoEvent(new C0APacketAnimation());
+                }
+                mc.playerController.attackEntity(mc.player, entity);
+                attacking = false;
+            } else if (swing) {
+                if (!silent) {
+                    mc.player.swingItem();
+                } else {
+                    sendPacketNoEvent(new C0APacketAnimation());
                 }
             }
 
-            if (shouldBlock()) {
-                sendPacketNoEvent(new C07PacketPlayerDigging(C07PacketPlayerDigging.Action.RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN));
-                //   print(mc.player.ticksExisted, "unBlock");
-                blocking = false;
-            }
-
-            mc.player.swingItem();
-            sendPacket(new C02PacketUseEntity(target, C02PacketUseEntity.Action.ATTACK));
-
-            if (mode.equals("MW Infinite")) {
-                Collections.reverse(vec3s);
-
-                for (cc.novoline.utils.pathfinding.Vec3 vec3 : vec3s) {
-                    sendPacketNoEvent(new C03PacketPlayer.C04PacketPlayerPosition(vec3.getX(), vec3.getY(), vec3.getZ(), true));
-                    sendPacketNoEvent(new C03PacketPlayer(true));
+            AutoBlockMode ab = getAutoBlockMode();
+            if (blockAllowed() && blockState == 1 && ab.interacts && inReach) {
+                MovingObjectPosition hit = RotationUtils.rayTraceEntity(entity, range.get() + 0.3, currentRot[0], currentRot[1]);
+                if (hit != null && hit.hitVec != null) {
+                    Vec3 vec3 = new Vec3(hit.hitVec.xCoord - entity.posX, hit.hitVec.yCoord - entity.posY, hit.hitVec.zCoord - entity.posZ);
+                    sendPacketNoEvent(new C02PacketUseEntity(entity, vec3));
+                    sendPacketNoEvent(new C02PacketUseEntity(entity, C02PacketUseEntity.Action.INTERACT));
+                }
+                if (PlayerUtils.holdingSword()) {
+                    setBlocking(true, true);
                 }
             }
+        }
+    }
 
-            if (particles.contains("Enchant")) {
-                mc.player.onEnchantmentCritical(target);
+    private void handlePacketAutoBlockPre(AutoBlockMode ab) {
+        if (blockState == 0) {
+            setBlocking(false, false);
+        }
+        switch (ab) {
+            case Swap:
+                switch (blockState) {
+                    case 0:
+                        setBlocking(true, true);
+                        ++blockState;
+                        break;
+                    case -1:
+                    case 1:
+                        if (blockState == -1 || currentAps >= 10.0) {
+                            attackQueued = true;
+                        }
+                        rollLag();
+                        blockState = 0;
+                        swapAway();
+                        serverBlocking = false;
+                        if (!lagging) fakeBlocking = false;
+                        break;
+                }
+                break;
+            case Dual:
+                handleDualAutoBlock();
+                break;
+            case Interact_A:
+            case Interact_B:
+            case Interact_C:
+            case Interact_D:
+                switch (blockState) {
+                    case 0:
+                        if (currentAps >= 10.0) attackQueued = true;
+                        if (attackQueued) {
+                            ++blockState;
+                            if ((ab == AutoBlockMode.Interact_B || ab == AutoBlockMode.Interact_C)) {
+                                sendPacketNoEvent(new C09PacketHeldItemChange(mc.player.inventory.currentItem));
+                            }
+                        }
+                        break;
+                    case -1:
+                    case 1:
+                        rollLag();
+                        if (blockState == 1) {
+                            if (ab == AutoBlockMode.Interact_B || ab == AutoBlockMode.Interact_C) {
+                                sendPacketNoEvent(new C09PacketHeldItemChange(freeSlot()));
+                                if (ab == AutoBlockMode.Interact_C) {
+                                    setBlocking(false, true);
+                                } else {
+                                    serverBlocking = false;
+                                }
+                            } else {
+                                if (ab == AutoBlockMode.Interact_D) swapAway();
+                                setBlocking(false, true);
+                            }
+                        }
+                        blockState = 0;
+                        break;
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void handleDualAutoBlock() {
+        int best = -1;
+        int second = -1;
+        double bestDamage = -1.0;
+        double secondDamage = -1.0;
+        for (int i = 0; i < 9; ++i) {
+            ItemStack stack = mc.player.inventory.getStackInSlot(i);
+            if (stack != null && stack.getItem() instanceof ItemSword) {
+                double dmg = 4.0;
+                if (dmg > bestDamage) {
+                    secondDamage = bestDamage;
+                    second = best;
+                    bestDamage = dmg;
+                    best = i;
+                } else if (dmg > secondDamage) {
+                    secondDamage = dmg;
+                    second = i;
+                }
             }
+        }
+        if (second == -1) {
+            blockState = -1;
+            return;
+        }
+        if (attackQueued) {
+            blockState = 1;
+            int slot = (dualSwaps++ & 1) == 0 ? best : second;
+            sendPacketNoEvent(new C09PacketHeldItemChange(slot));
+        } else {
+            blockState = 0;
+        }
+    }
 
-            if (particles.contains("Critical")) {
-                mc.player.onCriticalHit(target);
+    private void swapAway() {
+        sendPacketNoEvent(new C09PacketHeldItemChange(freeSlot()));
+        sendPacketNoEvent(new C09PacketHeldItemChange(mc.player.inventory.currentItem));
+    }
+
+    private int freeSlot() {
+        int current = mc.player.inventory.currentItem;
+        for (int i = 0; i < 9; ++i) {
+            if (i != current && mc.player.inventory.getStackInSlot(i) == null) {
+                return i;
             }
+        }
+        for (int i = 0; i < 9; ++i) {
+            if (i != current) {
+                ItemStack stack = mc.player.inventory.getStackInSlot(i);
+                if (stack != null && !(stack.getItem() instanceof ItemSword)) {
+                    return i;
+                }
+            }
+        }
+        return (current + 1) % 9;
+    }
 
-            timerAttack.reset();
+    private void rollLag() {
+        if ((lagAccumulator += autoBlockLag.get()) >= 100) {
+            lagAccumulator -= 100;
+            lagging = true;
+        } else {
+            lagging = false;
+        }
+    }
+
+    public void setBlocking(boolean block, boolean packet) {
+        if (packet) {
+            if (block) {
+                sendPacketNoEvent(new C08PacketPlayerBlockPlacement(mc.player.getHeldItem()));
+            } else {
+                releasing = true;
+                sendPacketNoEvent(new C07PacketPlayerDigging(
+                        C07PacketPlayerDigging.Action.RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN));
+                releasing = false;
+            }
+            serverBlocking = fakeBlocking = block;
+        } else {
+            KeyBinding.setKeyBindState(mc.gameSettings.keyBindUseItem.getKeyCode(), block);
+            fakeBlocking = block;
+        }
+    }
+
+    private void releaseFlow(int state) {
+        AutoBlockMode ab = getAutoBlockMode();
+        if (ab.packet) {
+            setBlocking(false, true);
+        }
+        fakeBlocking = false;
+        serverBlocking = false;
+    }
+
+    private void releaseHeldPackets(boolean all) {
+        if (heldPackets.isEmpty()) return;
+        synchronized (heldPackets) {
+            for (Packet<?> p : heldPackets) {
+                sendPacketNoEvent(p);
+            }
+            heldPackets.clear();
         }
     }
 
     @EventTarget
-    public void onMotions(MotionUpdateEvent event) {
-        if (event.getState().equals(MotionUpdateEvent.State.PRE)) {
-            if (shouldBlock() || blocking /*&& mc.player.ticksExisted % 2 != 0*/) {
-                sendPacketNoEvent(new C07PacketPlayerDigging(C07PacketPlayerDigging.Action.RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN));
-                //print(mc.player.ticksExisted, "unBlock");
-                blocking = false;
+    public void onPacket(PacketEvent event) {
+        if (event.getState() == PacketEvent.State.INCOMING) {
+            if (event.getPacket() instanceof S12PacketEntityVelocity) {
+                S12PacketEntityVelocity p = (S12PacketEntityVelocity) event.getPacket();
+                if (p.getEntityID() == mc.player.getEntityID()) {
+                    damageBlockAt = System.currentTimeMillis();
+                    if (attackOnDamage.get() > 0) {
+                        forcedAttacks = attackOnDamage.get();
+                    }
+                }
             }
-
-        } else {
-            if (shouldAttack() && rayTraycing(target) && !serverLag()) {
-                attackEntity(target);
-            }
-
-            if (shouldBlock()) {
-                interactAutoBlock();
-                mc.player.getHeldItem().useItemRightClick(mc.world, mc.player);
-
-                //  if (mc.player.ticksExisted % 2 == 0) {
-                sendPacketNoEvent(new C08PacketPlayerBlockPlacement(mc.player.getHeldItem()));
-                //print(mc.player.ticksExisted, "Block");
-                blocking = true;
-                //   }
+        } else if (event.getState() == PacketEvent.State.OUTGOING) {
+            Packet<?> p = event.getPacket();
+            AutoBlockMode ab = getAutoBlockMode();
+            if (ab.lags && lagging && !heldPackets.isEmpty()) {
+                if (!(p instanceof C0APacketAnimation)) {
+                    heldPackets.add(p);
+                    event.setCancelled(true);
+                }
             }
         }
     }
 
     @EventTarget
     public void onTick(TickUpdateEvent event) {
-        setSuffix(mode());
-    }
-
-    @EventTarget
-    public void onSlowDown(SlowdownEvent event) {
-        if (shouldBlock()) {
-            event.setCancelled(true);
+        if (lagging && !heldPackets.isEmpty()) {
+            releaseHeldPackets(true);
+            lagging = false;
         }
-    }
-
-    @EventTarget
-    public void onSend(PacketEvent event) {
-        if (event.getState().equals(PacketEvent.State.OUTGOING)) {
-            if (blinking) {
-                if (event.getPacket() instanceof C03PacketPlayer) {
-                    C03PacketPlayer packet = (C03PacketPlayer) event.getPacket();
-
-                    if (packet.isMoving()) {
-                        toDispatch.add(event.getPacket());
-                        event.setCancelled(true);
-                    }
-                }
-
-                if (event.getPacket() instanceof C02PacketUseEntity) {
-                    C02PacketUseEntity packet = (C02PacketUseEntity) event.getPacket();
-
-                    if (packet.getAction().equals(C02PacketUseEntity.Action.ATTACK) && packet.getEntityFromWorld(mc.world).equals(target)) {
-                        dispatchPackets();
-                        blinking = false;
-                    }
-                }
-
-                if (toDispatch.size() > 60) {
-                    dispatchPackets();
-                    novoline.getNotificationManager().pop(getDisplayName(), "Packet buffer overloaded!", 2000, NotificationType.ERROR);
-                    blinking = false;
-                }
-            }
-
-            if (shouldBlock() || blocking) {
-                if (event.getPacket() instanceof C07PacketPlayerDigging) {
-                    C07PacketPlayerDigging packet = (C07PacketPlayerDigging) event.getPacket();
-
-                    if (packet.getStatus().equals(C07PacketPlayerDigging.Action.RELEASE_USE_ITEM)) {
-                        event.setCancelled(true);
-                    }
-                }
-
-                if (event.getPacket() instanceof C08PacketPlayerBlockPlacement) {
-                    C08PacketPlayerBlockPlacement packet = (C08PacketPlayerBlockPlacement) event.getPacket();
-
-                    if (packet.getPlacedBlockDirection() == 255) {
-                        event.setCancelled(true);
-                    }
-                }
-            }
-
-        } else {
-            lossTimer.reset();
-        }
-    }
-
-
-    @EventTarget
-    public void Rotations(MotionUpdateEvent event) {
-        if (event.getState().equals(MotionUpdateEvent.State.PRE)) {
-            if (shouldRotate()) {
-                float frac = MathHelper.clamp_float(1f - smoothness.get() / 100f, 0.1f, 1f);
-                float[] rotations = RotationUtil.getAngles((EntityLivingBase) target);
-
-                iyaw = iyaw + (rotations[0] - iyaw) * frac;
-                ipitch = ipitch + (rotations[1] - ipitch) * frac;
-
-                event.setYaw(yaw = iyaw);
-                event.setPitch(pitch = ipitch);
-
-            } else {
-                iyaw = mc.player.rotationYaw;
-                ipitch = mc.player.rotationPitch;
-            }
-        }
-    }
-
-    public float getIYaw() {
-        return iyaw;
-    }
-
-    public float getIPitch() {
-        return ipitch;
-    }
-
-    private boolean interactable(Block block) {
-        return block == Blocks.chest || block == Blocks.trapped_chest || block == Blocks.crafting_table
-                || block == Blocks.furnace || block == Blocks.ender_chest || block == Blocks.enchanting_table;
-    }
-
-    private void interactAutoBlock() {
-        if (mc.gameSettings.keyBindUseItem.isKeyDown()) {
-            if (mc.objectMouseOver.entityHit != null) {
-                sendPacket(new C02PacketUseEntity(mc.objectMouseOver.entityHit, C02PacketUseEntity.Action.INTERACT));
-
-            } else if (interactable(mc.world.getBlockState(mc.objectMouseOver.getBlockPos()).getBlock())) {
-                mc.playerController.onPlayerRightClick(mc.player, mc.world, mc.player.getHeldItem(),
-                        mc.objectMouseOver.getBlockPos(), Block.getFacingDirection(mc.objectMouseOver.getBlockPos()), mc.objectMouseOver.hitVec);
-            }
-        }
-    }
-
-    public boolean isValidEntity(@NonNull Entity target) {
-        final boolean mobsTarget = targets.contains("Mobs"), animalsTarget = targets.contains("Animals"), //
-                playersTarget = targets.contains("Players"), invisibleTarget = targets.contains("Invisibles");
-
-        if (target.isEntityAlive() && mc.player.getHealth() > 0.0F && !novoline.getPlayerManager()
-                .hasType(target.getName(), PlayerManager.EnumPlayerType.FRIEND)) {
-            if (target instanceof EntityMob || target instanceof EntitySlime || target instanceof EntityGolem) {
-                return mobsTarget && !(target.isInvisible() && !invisibleTarget);
-            }
-
-            if (target instanceof EntityAnimal || target instanceof EntityVillager) {
-                return animalsTarget && !(target.isInvisible() && !invisibleTarget);
-            }
-
-            if (target instanceof EntityPlayer) {
-                return playersTarget
-                        && target != mc.player
-                        && (!filters.contains("Armor")
-                        || hasArmor((EntityPlayer) target))
-                        && (!filters.contains("Teams")
-                        || !PlayerUtils
-                        .inTeam(mc.player, target))
-                        && !(target.isInvisible() && !invisibleTarget) &&
-                        !isAutismShopKeeperCheck(target)
-                        && (!filters.contains("Users"))
-                        && target != getModule(Freecam.class).getFreecamEntity()
-                        && target != getModule(Blink.class).getBlinkEntity()
-                        && target != getModule(Teleport.class).getTeleportEntity();
-            }
-        }
-
-        return false;
-    }
-
-    private boolean isContainsTarget(boolean isSwitch) {
-        for (Entity entity : getEntityList(sort.get()).stream()
-                .filter(entity -> mc.player.getDistanceToEntity(entity) < range())
-                .collect(Collectors.toCollection(ObjectArrayList::new))) {
-            if (novoline.getPlayerManager().hasType(entity.getName(), PlayerManager.EnumPlayerType.TARGET)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private List<Entity> getEntityList(String sort) {
-        List<Entity> list = mc.world.getLoadedEntityList().stream().filter(this::isValidEntity).collect(Collectors.toList());
-
-        if (mode().equalsIgnoreCase("Single")) {
-            switch (sort) {
-                case "Distance":
-                    list = list.stream().sorted(Comparator.comparing(o -> o.getDistanceToEntity(mc.player)))
-                            .collect(Collectors.toCollection(ObjectArrayList::new));
-                    break;
-                case "Armor":
-                    list = list.stream().sorted(Comparator.comparing(
-                            o -> o instanceof EntityPlayer ? getProtection(((EntityPlayer) o).inventory.armorInventory) :
-                                    99999)).collect(Collectors.toCollection(ObjectArrayList::new));
-                    break;
-                case "Health":
-                    list = list.stream().sorted(Comparator.comparing(o -> ((EntityLivingBase) o).getHealth()))
-                            .collect(Collectors.toCollection(ObjectArrayList::new));
-                    break;
-                case "FOV":
-                    list = list.stream().sorted(Comparator.comparing(this::getYawDifference))
-                            .collect(Collectors.toCollection(ObjectArrayList::new));
-                    break;
-                case "HurtTime":
-                    list = list.stream().sorted(Comparator.comparing(o -> o.hurtResistantTime))
-                            .collect(Collectors.toCollection(ObjectArrayList::new));
-                    break;
-            }
-        }
-        if (mode.get().equals("MW Infinite")) {
-            return list.stream().filter(this::isInReach).filter(e -> e.getDisplayName().getFormattedText().startsWith("ยง")).collect(Collectors.toList());
-        } else {
-            return list.stream().filter(this::isInReach).collect(Collectors.toList());
-        }
-    }
-
-    private List<Entity> getTargetsFromRange() {
-        return getEntityList(sort.get()).stream().filter(e -> mc.player.getDistanceToEntity(e) <= range()).collect(Collectors.toList());
-    }
-
-    private int targetsInRange() {
-        int i = 0;
-
-        if (getEntityList(sort.get()).isEmpty()) {
-            return 0;
-
-        } else {
-            for (Entity entity : getEntityList(sort.get())) {
-                if (mc.player.getDistanceToEntity(entity) <= range()) {
-                    i++;
-                }
-            }
-
-            return i;
-        }
-    }
-
-    private Entity getTargetFromRange() {
-        for (Entity entity : getEntityList(sort.get())) {
-            if (mc.player.getDistanceToEntity(entity) <= range()) {
-                return entity;
-            }
-        }
-
-        return null;
-    }
-
-    private float interpolateAngles(float fraction) {
-        return 0;
-    }
-
-    private float getProtection(ItemStack[] stack1) {
-        float protection = 0;
-
-        for (ItemStack stack : stack1) {
-            if (stack != null) {
-                if (stack.getItem() instanceof ItemArmor) {
-                    final ItemArmor armor = (ItemArmor) stack.getItem();
-
-                    protection += armor.damageReduceAmount + (100 - armor.damageReduceAmount) * EnchantmentHelper
-                            .getEnchantmentLevel(Enchantment.protection.effectId, stack) * 0.0075D;
-                    protection += EnchantmentHelper
-                            .getEnchantmentLevel(Enchantment.blastProtection.effectId, stack) / 100d;
-                    protection += EnchantmentHelper
-                            .getEnchantmentLevel(Enchantment.fireProtection.effectId, stack) / 100d;
-                    protection += EnchantmentHelper.getEnchantmentLevel(Enchantment.thorns.effectId, stack) / 100d;
-                    protection += EnchantmentHelper.getEnchantmentLevel(Enchantment.unbreaking.effectId, stack) / 50d;
-                    protection += EnchantmentHelper
-                            .getEnchantmentLevel(Enchantment.projectileProtection.effectId, stack) / 100d;
-                }
-            }
-        }
-
-        return protection;
-    }
-
-    private boolean isInReach(Entity target) {
-        return mc.player.getDistanceToEntity(target) <= (mc.player.canEntityBeSeen(target) ?
-                Math.max(range(), blockRange()) : wallRange());
     }
 
     @EventTarget
     public void onRender2D(Render2DEvent event) {
         if (targetHud.get()) {
-            if (shouldAttack()) {
+            if (shouldAttack() || (target != null && target.isEntityAlive())) {
                 if (target instanceof EntityPlayer && !(mc.currentScreen instanceof GuiChat)) {
                     RenderUtils.renderTHUD(this, (EntityPlayer) target);
                 }
             }
-        }
-
-        if (blinking) {
-            ScaledResolution sr = event.getResolution();
-            int size = toDispatch.size();
-            String color = "";
-
-            if (size > 40) {
-                color = "\u00A78";
-            } else if (size > 20) {
-                color = "\u00A77";
-            }
-
-            String sizeStr = color + toDispatch.size();
-            Fonts.SF.SF_18.SF_18.drawString("Buffer size: " + sizeStr, sr.getScaledWidthStatic(mc) / 2 - 26, sr.getScaledHeightStatic(mc) / 2 + 10, 0xFFFFFF, true);
         }
     }
 
@@ -692,154 +672,350 @@ public final class KillAura extends AbstractModule {
             RenderUtils.pre3D();
             GL11.glLineWidth(6);
             GL11.glBegin(GL11.GL_LINE_STRIP);
-
-            GL11.glColor4f(0, 0, 0, alpha);
+            GL11.glColor4f(0, 0, 0, 0.4F);
             for (double d = 0; d < Math.PI * 2; d += Math.PI * 2 / 51) {
-                double x = mc.player.lastTickPosX + (mc.player.posX - mc.player.lastTickPosX) * event.getPartialTicks() + Math.sin(d) * range.get() - mc.getRenderManager().renderPosX, // @off
-                        y = mc.player.lastTickPosY + (mc.player.posY - mc.player.lastTickPosY) * event.getPartialTicks() - mc.getRenderManager().renderPosY,
-                        z = mc.player.lastTickPosZ + (mc.player.posZ - mc.player.lastTickPosZ) * event.getPartialTicks() + Math.cos(d) * range.get() - mc.getRenderManager().renderPosZ; // @on
+                double x = mc.player.lastTickPosX + (mc.player.posX - mc.player.lastTickPosX) * event.getPartialTicks() + Math.sin(d) * range.get() - mc.getRenderManager().renderPosX;
+                double y = mc.player.lastTickPosY + (mc.player.posY - mc.player.lastTickPosY) * event.getPartialTicks() - mc.getRenderManager().renderPosY;
+                double z = mc.player.lastTickPosZ + (mc.player.posZ - mc.player.lastTickPosZ) * event.getPartialTicks() + Math.cos(d) * range.get() - mc.getRenderManager().renderPosZ;
                 GL11.glVertex3d(x, y, z);
             }
-
             GL11.glEnd();
             GL11.glLineWidth(3);
             GL11.glBegin(GL11.GL_LINE_STRIP);
             GL11.glColor4f(color.getAwtColor().getRed() / 255F, color.getAwtColor().getGreen() / 255F, color.getAwtColor().getBlue() / 255F, 1);
-
             for (double d = 0; d < Math.PI * 2; d += Math.PI * 2 / 51) {
-                double x = mc.player.lastTickPosX + (mc.player.posX - mc.player.lastTickPosX) * event.getPartialTicks() + Math.sin(d) * range.get() - mc.getRenderManager().renderPosX, // @off
-                        y = mc.player.lastTickPosY + (mc.player.posY - mc.player.lastTickPosY) * event.getPartialTicks() - mc.getRenderManager().renderPosY,
-                        z = mc.player.lastTickPosZ + (mc.player.posZ - mc.player.lastTickPosZ) * event.getPartialTicks() + Math.cos(d) * range.get() - mc.getRenderManager().renderPosZ; // @on
+                double x = mc.player.lastTickPosX + (mc.player.posX - mc.player.lastTickPosX) * event.getPartialTicks() + Math.sin(d) * range.get() - mc.getRenderManager().renderPosX;
+                double y = mc.player.lastTickPosY + (mc.player.posY - mc.player.lastTickPosY) * event.getPartialTicks() - mc.getRenderManager().renderPosY;
+                double z = mc.player.lastTickPosZ + (mc.player.posZ - mc.player.lastTickPosZ) * event.getPartialTicks() + Math.cos(d) * range.get() - mc.getRenderManager().renderPosZ;
                 GL11.glVertex3d(x, y, z);
             }
-
             GL11.glEnd();
             RenderUtils.post3D();
         }
     }
 
-    @EventTarget
-    public void onAutoDisable(PacketEvent event) {
-        if (event.getState().equals(PacketEvent.State.INCOMING)) {
-            if (ServerUtils.serverIs(Servers.DUELS) && event.getPacket() instanceof S45PacketTitle) {
-                final S45PacketTitle packet = (S45PacketTitle) event.getPacket();
+    private void findTarget() {
+        if (disableInInventory.get() && mc.currentScreen != null) {
+            setTarget(null);
+            return;
+        }
+        if (weaponOnly.get() && !PlayerUtils.holdingWeapon()) {
+            setTarget(null);
+            return;
+        }
+        if (requireMouseDown.get() && (!Mouse.isButtonDown(0) || mc.currentScreen instanceof GuiChat)) {
+            setTarget(null);
+            return;
+        }
+        if (disableWhileMining.get() && Mouse.isButtonDown(0) && mc.objectMouseOver != null && mc.objectMouseOver.typeOfHit == MovingObjectPosition.MovingObjectType.BLOCK) {
+            setTarget(null);
+            return;
+        }
 
-                if (packet.getType().equals(S45PacketTitle.Type.TITLE)) {
-                    final String text = packet.getMessage().getUnformattedText();
+        double maxReach = Math.max(Math.max(range.get(), swingRange.get()), blockRange.get());
+        double scanRangeSq = (maxReach + 1.2) * (maxReach + 1.2);
 
-                    if (text.equals("VICTORY!")) {
-                        novoline.getNotificationManager().pop("Check chat for stats", 1000, NotificationType.INFO);
-                        DebugUtil.log(true, "[" + EnumChatFormatting.RED + "Stats" + EnumChatFormatting.GRAY + "] " + EnumChatFormatting.RESET + "Your hp: " + EnumChatFormatting.GREEN + mc.player.getHealth());
-                    }
+        List<EntityLivingBase> candidates = new ArrayList<>();
+        Entity fireball = null;
+        double nearestFireball = -1.0;
 
-                    if (text.equals("GAME OVER!")) {
-                        novoline.getNotificationManager().pop("Check chat for stats", 1000, NotificationType.INFO);
-                        DebugUtil.log(true, "[" + EnumChatFormatting.RED + "Stats" + EnumChatFormatting.GRAY + "] " + EnumChatFormatting.RESET + "Opponent hp: " + EnumChatFormatting.GREEN + ((EntityLivingBase) target).getHealth());
+        for (Entity e : mc.world.getLoadedEntityList()) {
+            if (e == mc.player) continue;
+
+            if (targets.contains("Fireballs") && e instanceof EntityLargeFireball) {
+                double d = mc.player.getDistanceSqToEntity(e);
+                if (d <= scanRangeSq && PlayerUtils.inFov((float) fov.get(), e) && RotationUtils.rayHits(e, swingRange.get())) {
+                    if (nearestFireball == -1.0 || d < nearestFireball) {
+                        nearestFireball = d;
+                        fireball = e;
                     }
                 }
+                continue;
             }
+
+            if (!(e instanceof EntityLivingBase)) continue;
+            EntityLivingBase living = (EntityLivingBase) e;
+
+            if (!isValidEntity(living)) continue;
+
+            double d = mc.player.getDistanceSqToEntity(living);
+            if (d > scanRangeSq) continue;
+
+            if (fov.get() < 360 && !PlayerUtils.inFov((float) fov.get(), living)) continue;
+
+            if (!hitThroughBlocks.get()) {
+                Vec3 point = RotationUtils.visiblePoint(living);
+                if (point == null) continue;
+                aimPoints.put(living.getEntityId(), point);
+            }
+
+            candidates.add(living);
         }
-    }
 
-    private void dispatchPackets() {
-        blinking = false;
-        toDispatch.forEach(this::sendPacketNoEvent);
-        toDispatch.clear();
-    }
-
-    public MovingObjectPosition getPosition() {
-        float borderSize = target.getCollisionBorderSize();
-        Vec3 positionEyes = RotationUtil.getPositionEyes(1);
-        Vec3 startVec = RotationUtil.getVectorForRotation(getIPitch(), getIYaw());
-        Vec3 endVec = positionEyes.addVector(startVec.xCoord * range(), startVec.yCoord * range(), startVec.zCoord * range());
-        return target.getEntityBoundingBox().expand(borderSize, borderSize, borderSize).calculateIntercept(positionEyes, endVec);
-    }
-
-    private ArrayList<cc.novoline.utils.pathfinding.Vec3> computePath(cc.novoline.utils.pathfinding.Vec3 topFrom, cc.novoline.utils.pathfinding.Vec3 to) {
-        if (!canPassThrow(new BlockPos(topFrom.mc()))) {
-            topFrom = topFrom.addVector(0, 1, 0);
-        }
-        AStarCustomPathfinder pathfinder = new AStarCustomPathfinder(topFrom, to);
-        pathfinder.compute();
-
-        int i = 0;
-        cc.novoline.utils.pathfinding.Vec3 lastLoc = null;
-        cc.novoline.utils.pathfinding.Vec3 lastDashLoc = null;
-        ArrayList<cc.novoline.utils.pathfinding.Vec3> path = new ArrayList<>();
-        ArrayList<cc.novoline.utils.pathfinding.Vec3> pathFinderPath = pathfinder.getPath();
-        for (cc.novoline.utils.pathfinding.Vec3 pathElm : pathFinderPath) {
-            if (i == 0 || i == pathFinderPath.size() - 1) {
-                if (lastLoc != null) {
-                    path.add(lastLoc.addVector(0.5, 0, 0.5));
-                }
-                path.add(pathElm.addVector(0.5, 0, 0.5));
-                lastDashLoc = pathElm;
+        if (candidates.isEmpty()) {
+            if (fireball != null) {
+                inSwingRange = true;
+                setTarget(fireball);
             } else {
-                boolean canContinue = true;
-                if (pathElm.squareDistanceTo(lastDashLoc) > 4 * 4) {
-                    canContinue = false;
-                } else {
-                    double smallX = Math.min(lastDashLoc.getX(), pathElm.getX());
-                    double smallY = Math.min(lastDashLoc.getY(), pathElm.getY());
-                    double smallZ = Math.min(lastDashLoc.getZ(), pathElm.getZ());
-                    double bigX = Math.max(lastDashLoc.getX(), pathElm.getX());
-                    double bigY = Math.max(lastDashLoc.getY(), pathElm.getY());
-                    double bigZ = Math.max(lastDashLoc.getZ(), pathElm.getZ());
-                    cordsLoop:
-                    for (int x = (int) smallX; x <= bigX; x++) {
-                        for (int y = (int) smallY; y <= bigY; y++) {
-                            for (int z = (int) smallZ; z <= bigZ; z++) {
-                                if (!AStarCustomPathfinder.checkPositionValidity(x, y, z, false)) {
-                                    canContinue = false;
-                                    break cordsLoop;
-                                }
-                            }
-                        }
-                    }
-                }
-                if (!canContinue) {
-                    path.add(lastLoc.addVector(0.5, 0, 0.5));
-                    lastDashLoc = lastLoc;
-                }
+                setTarget(null);
             }
-            lastLoc = pathElm;
-            i++;
+            targetList.clear();
+            return;
         }
-        return path;
+
+        Comparator<EntityLivingBase> comparator = null;
+        switch (sort.get()) {
+            case "Health":
+                comparator = Comparator.comparingDouble(EntityLivingBase::getHealth);
+                break;
+            case "Hurt_time":
+                comparator = Comparator.comparingDouble(ent -> ent.hurtTime);
+                break;
+            case "Yaw":
+                comparator = Comparator.comparingDouble(ent -> RotationUtils.absYawDifference(ent, mc.player.rotationYaw));
+                break;
+            case "Distance":
+            default:
+                comparator = Comparator.comparingDouble(ent -> mc.player.getDistanceSqToEntity(ent));
+                break;
+        }
+        candidates.sort(comparator);
+
+        targetList.clear();
+        targetList.addAll(candidates);
+
+        long delay = switchDelay.get() < 100.0F ? 100L : switchDelay.get().longValue();
+        long now = System.currentTimeMillis();
+        long cycle = (long) Math.min((double) candidates.size(), targetsLimit.get()) * delay;
+        Entity chosen = null;
+
+        for (EntityLivingBase e : candidates) {
+            UUID uuid = e.getUniqueID();
+            Long l = switchTimes.get(uuid);
+            if (l == null) continue;
+            if (l > 0L) {
+                if (Math.abs(now - l) < delay) {
+                    chosen = e;
+                    break;
+                }
+                if (cycle != delay) {
+                    switchTimes.put(uuid, -l);
+                    continue;
+                }
+                switchTimes.remove(uuid);
+                continue;
+            }
+            if (Math.abs(now - -l) < cycle) continue;
+            switchTimes.remove(uuid);
+        }
+
+        if (chosen == null) {
+            for (EntityLivingBase e : candidates) {
+                if (switchTimes.get(e.getUniqueID()) != null) continue;
+                switchTimes.put(e.getUniqueID(), now);
+                chosen = e;
+                break;
+            }
+            if (chosen == null && exists(previousTarget)) {
+                chosen = previousTarget;
+            }
+        }
+
+        if (chosen == null && !candidates.isEmpty()) {
+            chosen = candidates.get(0);
+        }
+
+        inSwingRange = true;
+        setTarget(chosen);
     }
 
-    private boolean canPassThrow(BlockPos pos) {
-        Block block = Minecraft.getInstance().world.getBlockState(new net.minecraft.util.BlockPos(pos.getX(), pos.getY(), pos.getZ())).getBlock();
-        return block.getMaterial() == Material.air || block.getMaterial() == Material.plants || block.getMaterial() == Material.vine || block == Blocks.ladder || block == Blocks.water || block == Blocks.flowing_water || block == Blocks.wall_sign || block == Blocks.standing_sign;
+    private void updateRotations() {
+        float lastYaw = iyaw;
+        float lastPitch = ipitch;
+        rotations = aim();
+        if (smoothness.get() > 0.0) {
+            smooth(rotations, lastYaw, lastPitch);
+        }
+        rotations = RotationUtils.fixSensitivity(rotations[0], rotations[1], lastYaw, lastPitch);
     }
 
+    private void applyRotations(float[] rot, MotionUpdateEvent event) {
+        if (rot == null) return;
+        prevIYaw = iyaw;
+        prevIPitch = ipitch;
+        iyaw = rot[0];
+        ipitch = rot[1];
 
-    //endregion
+        if (rotationMode.get().equalsIgnoreCase("Silent")) {
+            event.setYaw(rot[0]);
+            event.setPitch(rot[1]);
+        } else if (rotationMode.get().equalsIgnoreCase("Lock_view")) {
+            mc.player.rotationYaw = rot[0];
+            mc.player.rotationPitch = rot[1];
+            event.setYaw(rot[0]);
+            event.setPitch(rot[1]);
+        }
+    }
 
+    private boolean smoothReturn(MotionUpdateEvent event) {
+        if (smoothness.get() == 0.0) return false;
+        float yaw = mc.player.rotationYaw;
+        float pitch = mc.player.rotationPitch;
+        float dYaw = Math.abs(MathHelper.wrapAngleTo180_float(yaw - lastClientYaw));
+        float dPitch = Math.abs(pitch - lastClientPitch);
+        lastClientYaw = yaw;
+        lastClientPitch = pitch;
+        if (dYaw > 20.0f || dPitch > 8.0f) return false;
 
-    //region Lombok
+        float[] rot = new float[]{yaw, pitch};
+        smooth(rot, iyaw, ipitch);
+        rot = RotationUtils.fixSensitivity(rot[0], rot[1], iyaw, ipitch);
+        applyRotations(rot, event);
+
+        return Math.abs(MathHelper.wrapAngleTo180_float(rot[0] - mc.player.rotationYaw)) > 3.0f
+                || Math.abs(rot[1] - mc.player.rotationPitch) > 3.0f;
+    }
+
+    private void smooth(float[] rot, float lastYaw, float lastPitch) {
+        float maxYaw = 7.0f;
+        float maxPitch = 3.0f;
+        float keep = (float) (1.0 - Math.min(9.9, smoothness.get()) / 10.0);
+        float dYaw = MathHelper.wrapAngleTo180_float(rot[0] - lastYaw);
+        float aYaw = Math.abs(dYaw);
+        float dPitch = rot[1] - lastPitch;
+        float aPitch = Math.abs(dPitch);
+        if (aYaw > maxYaw) {
+            dYaw = Math.signum(dYaw) * ((aYaw - maxYaw) * keep + maxYaw);
+        }
+        if (aPitch > maxPitch) {
+            dPitch = Math.signum(dPitch) * ((aPitch - maxPitch) * keep + maxPitch);
+        }
+        rot[0] = lastYaw + dYaw;
+        rot[1] = lastPitch + dPitch;
+    }
+
+    private float[] aim() {
+        if (aimPoint != null) {
+            return RotationUtils.toVec(aimPoint);
+        }
+        return RotationUtils.toEntityBox(target);
+    }
+
+    private void updateAps() {
+        double d = blockAllowed() ? autoBlockAps.get() : aps.get();
+        if (target != null && getAutoBlockMode() == AutoBlockMode.Dual) {
+            if (blockState == -1) {
+                dualAccumulator = 20.0 - d;
+            }
+            if ((dualAccumulator += d) >= 20.0) {
+                dualAccumulator -= 20.0;
+                attackQueued = true;
+            }
+        }
+        if (currentAps != d) {
+            setDelay(true);
+            currentAps = d;
+        }
+    }
+
+    private void setDelay(boolean now) {
+        if (now) {
+            attackDelay = 0L;
+        } else {
+            double a = currentAps > 0.0 ? currentAps : aps.get();
+            attackDelay = (long) (1000.0 / a + (double) (int) ((Math.random() - 0.5) * 8.0));
+        }
+    }
+
+    public boolean blockAllowed() {
+        return !manualBlock.get() || isRightDown();
+    }
+
+    private boolean isRightDown() {
+        return Mouse.isButtonDown(1);
+    }
+
+    private boolean exists(Entity t) {
+        return t != null && t.isEntityAlive() && mc.world.getEntityByID(t.getEntityID()) != null;
+    }
+
+    public boolean isValidEntity(@NonNull Entity entity) {
+        if (entity == mc.player || !entity.isEntityAlive() || (entity instanceof EntityLivingBase && ((EntityLivingBase) entity).deathTime != 0)) {
+            return false;
+        }
+        if (entity instanceof EntityPlayer) {
+            if (!targets.contains("Players")) {
+                return false;
+            }
+            EntityPlayer player = (EntityPlayer) entity;
+            if (novoline.getPlayerManager().hasType(player.getName(), FRIEND)) {
+                return false;
+            }
+            if (ignoreTeammates.get() && filters.contains("Teams") && PlayerUtils.inTeamWithMinecraftPlayer(player)) {
+                return false;
+            }
+            if (filters.contains("Armor") && !hasArmor(player)) {
+                return false;
+            }
+            if (entity.isInvisible() && !targets.contains("Invisibles") && PlayerUtils.isInvisibleUnarmoured((EntityLivingBase) entity)) {
+                return false;
+            }
+            return true;
+        }
+        if (entity instanceof EntityMob || entity instanceof EntitySlime) {
+            return targets.contains("Mobs");
+        }
+        if (entity instanceof EntityAnimal || entity instanceof EntityVillager) {
+            return targets.contains("Animals");
+        }
+        return false;
+    }
+
+    private boolean hasArmor(@NonNull EntityPlayer e) {
+        for (int i = 0; i <= 3; ++i) {
+            if (e.inventory.armorInventory[i] != null) return true;
+        }
+        return false;
+    }
+
+    //region Compatibility Getters
     public Entity getTarget() {
         return target;
     }
 
-    public void setTarget(Entity target) {
-        this.target = target;
+    public void setTarget(Entity entity) {
+        if (entity == null) {
+            switchTimes.clear();
+            if (target != null && getAutoBlockMode().packet) {
+                releaseFlow(blockState);
+            }
+            fakeBlocking = false;
+            serverBlocking = false;
+            inSwingRange = false;
+            blockState = -1;
+            aimPoint = null;
+            aimPoints.clear();
+        } else if (!hitThroughBlocks.get()) {
+            aimPoint = aimPoints.get(entity.getEntityID());
+        }
+        previousTarget = target;
+        target = entity;
     }
 
-    public StringProperty getMode() {
-        return mode;
+    public boolean shouldAttack() {
+        return target != null && target.isEntityAlive() && !isEnabled(Scaffold.class);
     }
 
-    public String mode() {
-        return mode.get();
+    public boolean shouldBlock() {
+        return (getAutoBlockMode() != AutoBlockMode.Off) && target != null && PlayerUtils.holdingSword() && isEnabled() && !isEnabled(Scaffold.class);
     }
 
-    public FloatProperty getSwitchDelay() {
-        return switchDelay;
+    public boolean isFakeBlocking() {
+        return fakeBlocking;
     }
 
-    public DoubleProperty getAps() {
-        return aps;
+    public boolean isServerBlocking() {
+        return serverBlocking;
     }
 
     public DoubleProperty getRange() {
@@ -854,20 +1030,28 @@ public final class KillAura extends AbstractModule {
         return blockRange;
     }
 
-    public double range() {
-        return mode.get().equals("MW Infinite") ? 100 : range.get();
+    public DoubleProperty getAps() {
+        return aps;
     }
 
-    public double blockRange() {
-        return mode.get().equals("MW Infinite") ? 100 : blockRange.get();
+    public FloatProperty getSwitchDelay() {
+        return switchDelay;
     }
 
-    public double wallRange() {
-        return mode.get().equals("MW Infinite") ? 100 : wallRange.get();
+    public StringProperty getMode() {
+        return mode;
+    }
+
+    public String mode() {
+        return mode.get();
+    }
+
+    public StringProperty getSort() {
+        return sort;
     }
 
     public IntProperty getFovCheck() {
-        return fovCheck;
+        return fov;
     }
 
     public ListProperty<String> getTargets() {
@@ -878,19 +1062,15 @@ public final class KillAura extends AbstractModule {
         return filters;
     }
 
-    public ListProperty<String> getParticles() {
-        return particles;
-    }
-
     public BooleanProperty getAutoBlock() {
-        return autoBlock;
+        return PropertyFactory.createBoolean(getAutoBlockMode() != AutoBlockMode.Off);
     }
 
     public BooleanProperty getTargetHud() {
         return targetHud;
     }
 
-    public ListProperty getAutoDisable() {
+    public ListProperty<String> getAutoDisable() {
         return autoDisable;
     }
 
@@ -903,24 +1083,31 @@ public final class KillAura extends AbstractModule {
     }
 
     public float getYaw() {
-        return yaw;
+        return iyaw;
     }
 
     public float getPitch() {
-        return pitch;
+        return ipitch;
+    }
+
+    public float getIYaw() {
+        return iyaw;
+    }
+
+    public float getIPitch() {
+        return ipitch;
+    }
+
+    public float getPrevIYaw() {
+        return prevIYaw;
+    }
+
+    public float getPrevIPitch() {
+        return prevIPitch;
     }
 
     public List<Entity> getTargetList() {
         return targetList;
     }
-
-    public StringProperty getSort() {
-        return sort;
-    }
-
-    public boolean lagCheck() {
-        return lagCheck.get();
-    }
-
     //endregion
 }

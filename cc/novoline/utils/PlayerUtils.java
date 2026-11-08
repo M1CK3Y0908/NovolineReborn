@@ -55,6 +55,38 @@ public final class PlayerUtils {
 		return matcher.find() ? matcher.group(1) : "f";
 	}
 
+	public static boolean inFov(float fov, net.minecraft.entity.Entity entity) {
+		Minecraft mc = Minecraft.getInstance();
+		float[] rot = RotationUtils.toEntityBox(entity);
+		if (rot == null) return false;
+		float diffYaw = net.minecraft.util.MathHelper.wrapAngleTo180_float(mc.player.rotationYaw - rot[0]);
+		return Math.abs(diffYaw) <= fov / 2.0f;
+	}
+
+	public static boolean isInvisibleUnarmoured(net.minecraft.entity.EntityLivingBase entity) {
+		if (!entity.isInvisible()) {
+			return false;
+		}
+		for (int i = 0; i <= 4; ++i) {
+			if (entity.getEquipmentInSlot(i) != null) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	public static boolean holdingSword() {
+		Minecraft mc = Minecraft.getInstance();
+		return mc.player.getHeldItem() != null && mc.player.getHeldItem().getItem() instanceof net.minecraft.item.ItemSword;
+	}
+
+	public static boolean holdingWeapon() {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.player.getHeldItem() == null) return false;
+		net.minecraft.item.Item item = mc.player.getHeldItem().getItem();
+		return item instanceof net.minecraft.item.ItemSword || item instanceof net.minecraft.item.ItemAxe;
+	}
+
 	@Contract(value = "-> fail", pure = true)
 	private PlayerUtils() {
 		throw new java.lang.UnsupportedOperationException("This is a utility class and cannot be instantiated");

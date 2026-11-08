@@ -1,6 +1,7 @@
 package net.minecraft.client.renderer;
 
 import cc.novoline.Novoline;
+import cc.novoline.modules.combat.KillAura;
 import cc.novoline.modules.visual.Animations;
 import cc.novoline.modules.visual.Chams;
 import net.minecraft.block.Block;
@@ -363,7 +364,7 @@ public class ItemRenderer {
         if (this.itemToRender != null) {
             if (this.itemToRender.getItem() instanceof ItemMap) {
                 this.renderItemMap(entityplayersp, f2, f, f1);
-            } else if (entityplayersp.getItemInUseCount() > 0) {
+            } else if (entityplayersp.getItemInUseCount() > 0 || (Novoline.getInstance().getModuleManager().getModule(KillAura.class) != null && Novoline.getInstance().getModuleManager().getModule(KillAura.class).isEnabled() && Novoline.getInstance().getModuleManager().getModule(KillAura.class).isFakeBlocking() && this.itemToRender.getItem() instanceof net.minecraft.item.ItemSword)) {
                 EnumAction enumaction = this.itemToRender.getItemUseAction();
 
                 switch (enumaction) {
