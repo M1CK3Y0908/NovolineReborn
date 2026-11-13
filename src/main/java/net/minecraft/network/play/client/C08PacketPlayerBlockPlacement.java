@@ -1,0 +1,58 @@
+package net.minecraft.network.play.client;
+
+import java.io.IOException;
+import net.minecraft.item.ItemStack;
+import net.minecraft.network.Packet;
+import net.minecraft.network.PacketBuffer;
+import net.minecraft.network.play.INetHandlerPlayServer;
+import net.minecraft.util.BlockPos;
+
+public class C08PacketPlayerBlockPlacement implements Packet<INetHandlerPlayServer> {
+   public BlockPos position;
+   public int placedBlockDirection;
+   public ItemStack stack;
+   public float facingX;
+   private static final BlockPos INVENTORY_CLICKED_POS = new BlockPos(-1, -1, -1);
+   public float facingY;
+   public float facingZ;
+
+   @Override
+   public void readPacketData(PacketBuffer buf) throws IOException {
+      this.position = buf.readBlockPos();
+      this.placedBlockDirection = buf.readUnsignedByte();
+      this.stack = buf.readItemStackFromBuffer();
+      this.facingX = buf.readUnsignedByte() / 16.0F;
+      this.facingY = buf.readUnsignedByte() / 16.0F;
+      this.facingZ = buf.readUnsignedByte() / 16.0F;
+   }
+
+   public C08PacketPlayerBlockPlacement(ItemStack stackIn) {
+      this(INVENTORY_CLICKED_POS, 255, stackIn, 0.0F, 0.0F, 0.0F);
+   }
+
+   public C08PacketPlayerBlockPlacement(BlockPos positionIn, int placedBlockDirectionIn, ItemStack stackIn, float facingXIn, float facingYIn, float facingZIn) {
+      this.position = positionIn;
+      this.placedBlockDirection = placedBlockDirectionIn;
+      this.stack = stackIn != null ? stackIn.copy() : null;
+      this.facingX = facingXIn;
+      this.facingY = facingYIn;
+      this.facingZ = facingZIn;
+   }
+
+   public C08PacketPlayerBlockPlacement() {
+   }
+
+   public void processPacket(INetHandlerPlayServer handler) {
+      handler.processPlayerBlockPlacement(this);
+   }
+
+   @Override
+   public void writePacketData(PacketBuffer buf) throws IOException {
+      buf.writeBlockPos(this.position);
+      buf.writeByte(this.placedBlockDirection);
+      buf.writeItemStackToBuffer(this.stack);
+      buf.writeByte((int)(this.facingX * 16.0F));
+      buf.writeByte((int)(this.facingY * 16.0F));
+      buf.writeByte((int)(this.facingZ * 16.0F));
+   }
+}

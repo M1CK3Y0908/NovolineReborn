@@ -1,0 +1,39 @@
+package net.minecraft.util;
+
+public class FrameTimer {
+   private int lastIndex;
+   private int counter;
+   private final long[] frames = new long[240];
+   private int index;
+
+   public long[] getFrames() {
+      return this.frames;
+   }
+
+   public void addFrame(long runningTime) {
+      this.frames[this.index] = runningTime;
+      this.index++;
+      if (this.index == 240) {
+         this.index = 0;
+      }
+
+      if (this.counter < 240) {
+         this.lastIndex = 0;
+         this.counter++;
+      } else {
+         this.lastIndex = this.parseIndex(this.index + 1);
+      }
+   }
+
+   public int getLastIndex() {
+      return this.lastIndex;
+   }
+
+   public int parseIndex(int rawIndex) {
+      return rawIndex % 240;
+   }
+
+   public int getIndex() {
+      return this.index;
+   }
+}

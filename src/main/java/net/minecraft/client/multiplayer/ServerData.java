@@ -1,0 +1,106 @@
+package net.minecraft.client.multiplayer;
+
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.util.ChatComponentTranslation;
+import net.minecraft.util.IChatComponent;
+
+public class ServerData {
+   public int version = 47;
+   public String gameVersion = "1.8.9";
+   private ServerData.ServerResourceMode resourceMode = ServerData.ServerResourceMode.PROMPT;
+   public String populationInfo;
+   public long pingToServer;
+   public boolean pinged;
+   public String playerList;
+   private String serverIcon;
+   public String serverName;
+   public String serverIP;
+   public String serverMOTD;
+   private boolean lanServer;
+
+   public void setResourceMode(ServerData.ServerResourceMode mode) {
+      this.resourceMode = mode;
+   }
+
+   public void copyFrom(ServerData serverDataIn) {
+      this.serverIP = serverDataIn.serverIP;
+      this.serverName = serverDataIn.serverName;
+      this.setResourceMode(serverDataIn.getResourceMode());
+      this.serverIcon = serverDataIn.serverIcon;
+      this.lanServer = serverDataIn.lanServer;
+   }
+
+   public static ServerData getServerDataFromNBTCompound(NBTTagCompound nbtCompound) {
+      ServerData serverData = new ServerData(nbtCompound.getString("name"), nbtCompound.getString("ip"), false);
+      if (nbtCompound.hasKey("icon", 8)) {
+         serverData.setBase64EncodedIconData(nbtCompound.getString("icon"));
+      }
+
+      if (nbtCompound.hasKey("acceptTextures", 1)) {
+         if (nbtCompound.getBoolean("acceptTextures")) {
+            serverData.setResourceMode(ServerData.ServerResourceMode.ENABLED);
+         } else {
+            serverData.setResourceMode(ServerData.ServerResourceMode.DISABLED);
+         }
+      } else {
+         serverData.setResourceMode(ServerData.ServerResourceMode.PROMPT);
+      }
+
+      return serverData;
+   }
+
+   public NBTTagCompound getNBTCompound() {
+      NBTTagCompound nbtTagCompound = new NBTTagCompound();
+      nbtTagCompound.setString("name", this.serverName);
+      nbtTagCompound.setString("ip", this.serverIP);
+      if (this.serverIcon != null) {
+         nbtTagCompound.setString("icon", this.serverIcon);
+      }
+
+      if (this.resourceMode == ServerData.ServerResourceMode.ENABLED) {
+         nbtTagCompound.setBoolean("acceptTextures", true);
+      } else if (this.resourceMode == ServerData.ServerResourceMode.DISABLED) {
+         nbtTagCompound.setBoolean("acceptTextures", false);
+      }
+
+      return nbtTagCompound;
+   }
+
+   public ServerData.ServerResourceMode getResourceMode() {
+      return this.resourceMode;
+   }
+
+   public boolean isOnLAN() {
+      return this.lanServer;
+   }
+
+   public ServerData(String name, String ip, boolean isLan) {
+      this.serverName = name;
+      this.serverIP = ip;
+      this.lanServer = isLan;
+   }
+
+   public void setBase64EncodedIconData(String icon) {
+      this.serverIcon = icon;
+   }
+
+   public String getBase64EncodedIconData() {
+      return this.serverIcon;
+   }
+
+   public enum ServerResourceMode {
+      ENABLED("enabled"),
+      DISABLED("disabled"),
+      PROMPT("prompt");
+
+      private final IChatComponent motd;
+
+      ServerResourceMode(String text) {
+         this.motd = new ChatComponentTranslation("addServer.resourcePack." + text);
+      }
+
+      public IChatComponent getMotd() {
+         return this.motd;
+      }
+   }
+}

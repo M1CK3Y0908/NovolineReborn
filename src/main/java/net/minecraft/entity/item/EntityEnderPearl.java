@@ -1,0 +1,94 @@
+package net.minecraft.entity.item;
+
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.monster.EntityEndermite;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.entity.projectile.EntityThrowable;
+import net.minecraft.util.DamageSource;
+import net.minecraft.util.EnumParticleTypes;
+import net.minecraft.util.MovingObjectPosition;
+import net.minecraft.world.World;
+
+public class EntityEnderPearl extends EntityThrowable {
+   private EntityLivingBase ignoreEntity;
+
+   public EntityEnderPearl(World worldIn, EntityLivingBase throwerIn) {
+      super(worldIn, throwerIn);
+      this.ignoreEntity = throwerIn;
+   }
+
+   @Override
+   protected void onImpact(MovingObjectPosition movingObject) {
+      EntityLivingBase entityLivingBase = this.getThrower();
+      if (movingObject.entityHit != null) {
+         if (movingObject.entityHit == this.ignoreEntity) {
+            return;
+         }
+
+         movingObject.entityHit.attackEntityFrom(DamageSource.causeThrownDamage(this, entityLivingBase), 0.0F);
+      }
+
+      for (int index = 0; index < 32; index++) {
+         this.worldObj
+            .spawnParticle(
+               EnumParticleTypes.PORTAL,
+               this.posX,
+               this.posY + this.rand.nextDouble() * 2.0,
+               this.posZ,
+               this.rand.nextGaussian(),
+               0.0,
+               this.rand.nextGaussian()
+            );
+      }
+
+      if (!this.worldObj.isRemote) {
+         if (entityLivingBase instanceof EntityPlayerMP entityPlayerMP) {
+            if (entityPlayerMP.playerNetServerHandler.getNetworkManager().isChannelOpen()
+               && entityPlayerMP.worldObj == this.worldObj
+               && !entityPlayerMP.isPlayerSleeping()) {
+               if (this.rand.nextFloat() < 0.05F && this.worldObj.getGameRules().getBoolean("doMobSpawning")) {
+                  EntityEndermite entityEndermite = new EntityEndermite(this.worldObj);
+                  entityEndermite.update();
+                  entityEndermite.setLocationAndAngles(
+                     entityLivingBase.posX, entityLivingBase.posY, entityLivingBase.posZ, entityLivingBase.rotationYaw, entityLivingBase.rotationPitch
+                  );
+                  this.worldObj.spawnEntityInWorld(entityEndermite);
+               }
+
+               if (entityLivingBase.isRiding()) {
+                  entityLivingBase.mountEntity((Entity)null);
+               }
+
+               entityLivingBase.setPositionAndUpdate(this.posX, this.posY, this.posZ);
+               entityLivingBase.fallDistance = 0.0F;
+               entityLivingBase.attackEntityFrom(DamageSource.fall, 5.0F);
+            }
+         } else if (entityLivingBase != null) {
+            entityLivingBase.setPositionAndUpdate(this.posX, this.posY, this.posZ);
+            entityLivingBase.fallDistance = 0.0F;
+         }
+
+         this.setDead();
+      }
+   }
+
+   public EntityEnderPearl(World worldIn) {
+      super(worldIn);
+   }
+
+   @Override
+   public void onUpdate() {
+      EntityLivingBase entityLivingBase = this.getThrower();
+      if (entityLivingBase != null && entityLivingBase instanceof EntityPlayer && !entityLivingBase.isEntityAlive()) {
+         this.setDead();
+      } else {
+         super.onUpdate();
+      }
+   }
+
+   public EntityEnderPearl(World worldIn, double x, double y, double z) {
+      super(worldIn, x, y, z);
+   }
+}

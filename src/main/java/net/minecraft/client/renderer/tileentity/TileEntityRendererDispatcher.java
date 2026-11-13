@@ -1,0 +1,201 @@
+package net.minecraft.client.renderer.tileentity;
+
+import com.google.common.collect.Maps;
+import java.util.Iterator;
+import java.util.Map;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.FontRenderer;
+import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.renderer.OpenGlHelper;
+import net.minecraft.client.renderer.RenderHelper;
+import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.client.renderer.texture.TextureManager;
+import net.minecraft.client.renderer.texture.TextureMap;
+import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
+import net.minecraft.crash.CrashReport;
+import net.minecraft.crash.CrashReportCategory;
+import net.minecraft.entity.Entity;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.tileentity.TileEntityBanner;
+import net.minecraft.tileentity.TileEntityBeacon;
+import net.minecraft.tileentity.TileEntityChest;
+import net.minecraft.tileentity.TileEntityEnchantmentTable;
+import net.minecraft.tileentity.TileEntityEndPortal;
+import net.minecraft.tileentity.TileEntityEnderChest;
+import net.minecraft.tileentity.TileEntityMobSpawner;
+import net.minecraft.tileentity.TileEntityPiston;
+import net.minecraft.tileentity.TileEntitySign;
+import net.minecraft.tileentity.TileEntitySkull;
+import net.minecraft.util.BlockPos;
+import net.minecraft.util.ReportedException;
+import net.minecraft.world.World;
+import net.optifine.EmissiveTextures;
+import net.optifine.reflect.Reflector;
+
+public class TileEntityRendererDispatcher {
+   public double entityZ;
+   public static double staticPlayerZ;
+   public double entityX;
+   public FontRenderer fontRenderer;
+   public Entity entity;
+   public TileEntity tileEntityRendered;
+   public Map<Class, TileEntitySpecialRenderer> mapSpecialRenderers = Maps.newHashMap();
+   private Tessellator batchBuffer = new Tessellator(2097152);
+   public TextureManager renderEngine;
+   public static double staticPlayerY;
+   public float entityYaw;
+   public double entityY;
+   public static double staticPlayerX;
+   private boolean drawingBatch = false;
+   public World worldObj;
+   public static TileEntityRendererDispatcher instance = new TileEntityRendererDispatcher();
+   public float entityPitch;
+
+   public void setWorld(World worldIn) {
+      this.worldObj = worldIn;
+   }
+
+   public FontRenderer getFontRenderer() {
+      return this.fontRenderer;
+   }
+
+   public <T extends TileEntity> TileEntitySpecialRenderer<T> getSpecialRendererByClass(Class<? extends TileEntity> teClass) {
+      TileEntitySpecialRenderer<? extends TileEntity> tileEntitySpecialRenderer = this.mapSpecialRenderers.get(teClass);
+      if (tileEntitySpecialRenderer == null && teClass != TileEntity.class) {
+         tileEntitySpecialRenderer = this.getSpecialRendererByClass((Class<? extends TileEntity>)teClass.getSuperclass());
+         this.mapSpecialRenderers.put(teClass, tileEntitySpecialRenderer);
+      }
+
+      return (TileEntitySpecialRenderer<T>)tileEntitySpecialRenderer;
+   }
+
+   public void renderTileEntityAt(TileEntity tileEntityIn, double x, double y, double z, float partialTicks) {
+      this.renderTileEntityAt(tileEntityIn, x, y, z, partialTicks, -1);
+   }
+
+   public <T extends TileEntity> TileEntitySpecialRenderer<T> getSpecialRenderer(TileEntity tileEntityIn) {
+      return tileEntityIn != null && !tileEntityIn.isInvalid() ? this.getSpecialRendererByClass((Class<? extends TileEntity>)tileEntityIn.getClass()) : null;
+   }
+
+   public void renderTileEntityAt(TileEntity tileEntityIn, double x, double y, double z, float partialTicks, int destroyStage) {
+      TileEntitySpecialRenderer specialRenderer = this.getSpecialRenderer(tileEntityIn);
+      if (specialRenderer != null) {
+         try {
+            this.tileEntityRendered = tileEntityIn;
+            if (this.drawingBatch && Reflector.checkObject(tileEntityIn, Reflector.reflectorMethod83)) {
+               specialRenderer.noop(tileEntityIn, x, y, z, partialTicks, this.batchBuffer.getWorldRenderer());
+            } else {
+               specialRenderer.renderTileEntityAt(tileEntityIn, x, y, z, partialTicks, destroyStage);
+            }
+
+            this.tileEntityRendered = null;
+         } catch (Throwable throwable) {
+            CrashReport crashReport = CrashReport.makeCrashReport(throwable, "Rendering Block Entity");
+            CrashReportCategory crashReportCategory = crashReport.makeCategory("Block Entity Details");
+            tileEntityIn.addInfoToCrashReport(crashReportCategory);
+            throw new ReportedException(crashReport);
+         }
+      }
+   }
+
+   public void drawBatch(int arg1) {
+      this.renderEngine.bindTexture(TextureMap.locationBlocksTexture);
+      RenderHelper.disableStandardItemLighting();
+      GlStateManager.blendFunc(770, 771);
+      GlStateManager.enableBlend();
+      GlStateManager.disableCull();
+      if (Minecraft.isAmbientOcclusionEnabled()) {
+         GlStateManager.shadeModel(7425);
+      } else {
+         GlStateManager.shadeModel(7424);
+      }
+
+      if (arg1 > 0) {
+         this.batchBuffer.getWorldRenderer().sortVertexData((float)staticPlayerX, (float)staticPlayerY, (float)staticPlayerZ);
+      }
+
+      this.batchBuffer.draw();
+      RenderHelper.enableStandardItemLighting();
+      this.drawingBatch = false;
+   }
+
+   public void cacheActiveRenderInfo(World worldIn, TextureManager textureManagerIn, FontRenderer fontrendererIn, Entity entityIn, float partialTicks) {
+      if (this.worldObj != worldIn) {
+         this.setWorld(worldIn);
+      }
+
+      this.renderEngine = textureManagerIn;
+      this.entity = entityIn;
+      this.fontRenderer = fontrendererIn;
+      this.entityYaw = entityIn.prevRotationYaw + (entityIn.rotationYaw - entityIn.prevRotationYaw) * partialTicks;
+      this.entityPitch = entityIn.prevRotationPitch + (entityIn.rotationPitch - entityIn.prevRotationPitch) * partialTicks;
+      this.entityX = entityIn.lastTickPosX + (entityIn.posX - entityIn.lastTickPosX) * partialTicks;
+      this.entityY = entityIn.lastTickPosY + (entityIn.posY - entityIn.lastTickPosY) * partialTicks;
+      this.entityZ = entityIn.lastTickPosZ + (entityIn.posZ - entityIn.lastTickPosZ) * partialTicks;
+   }
+
+   public void preDrawBatch() {
+      this.batchBuffer.getWorldRenderer().begin(7, DefaultVertexFormats.BLOCK);
+      this.drawingBatch = true;
+   }
+
+   public void renderTileEntity(TileEntity tileentityIn, float partialTicks, int destroyStage) {
+      if (tileentityIn.getDistanceSq(this.entityX, this.entityY, this.entityZ) < tileentityIn.getMaxRenderDistanceSquared()) {
+         boolean flag = true;
+         if (Reflector.reflectorMethod83.isActive()) {
+            flag = !this.drawingBatch || !Reflector.checkObject(tileentityIn, Reflector.reflectorMethod83);
+         }
+
+         if (flag) {
+            RenderHelper.enableStandardItemLighting();
+            int combinedLight = this.worldObj.getCombinedLight(tileentityIn.getPos(), 0);
+            int i = combinedLight % 65536;
+            int i2 = combinedLight / 65536;
+            OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, i / 1.0F, i2 / 1.0F);
+            GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+         }
+
+         BlockPos pos = tileentityIn.getPos();
+         if (!this.worldObj.isBlockLoaded(pos, false)) {
+            return;
+         }
+
+         if (EmissiveTextures.isActive()) {
+            EmissiveTextures.beginRender();
+         }
+
+         this.renderTileEntityAt(
+            tileentityIn, pos.getX() - staticPlayerX, pos.getY() - staticPlayerY, pos.getZ() - staticPlayerZ, partialTicks, destroyStage
+         );
+         if (EmissiveTextures.isActive()) {
+            if (EmissiveTextures.hasEmissive()) {
+               EmissiveTextures.beginRenderEmissive();
+               this.renderTileEntityAt(
+                  tileentityIn, pos.getX() - staticPlayerX, pos.getY() - staticPlayerY, pos.getZ() - staticPlayerZ, partialTicks, destroyStage
+               );
+               EmissiveTextures.endRenderEmissive();
+            }
+
+            EmissiveTextures.endRender();
+         }
+      }
+   }
+
+   private TileEntityRendererDispatcher() {
+      this.mapSpecialRenderers.put(TileEntitySign.class, new TileEntitySignRenderer());
+      this.mapSpecialRenderers.put(TileEntityMobSpawner.class, new TileEntityMobSpawnerRenderer());
+      this.mapSpecialRenderers.put(TileEntityPiston.class, new TileEntityPistonRenderer());
+      this.mapSpecialRenderers.put(TileEntityChest.class, new TileEntityChestRenderer());
+      this.mapSpecialRenderers.put(TileEntityEnderChest.class, new TileEntityEnderChestRenderer());
+      this.mapSpecialRenderers.put(TileEntityEnchantmentTable.class, new TileEntityEnchantmentTableRenderer());
+      this.mapSpecialRenderers.put(TileEntityEndPortal.class, new TileEntityEndPortalRenderer());
+      this.mapSpecialRenderers.put(TileEntityBeacon.class, new TileEntityBeaconRenderer());
+      this.mapSpecialRenderers.put(TileEntitySkull.class, new TileEntitySkullRenderer());
+      this.mapSpecialRenderers.put(TileEntityBanner.class, new TileEntityBannerRenderer());
+      Iterator iterator2 = this.mapSpecialRenderers.values().iterator();
+
+      while (iterator2.hasNext()) {
+         ((TileEntitySpecialRenderer)iterator2.next()).setRendererDispatcher(this);
+      }
+   }
+}

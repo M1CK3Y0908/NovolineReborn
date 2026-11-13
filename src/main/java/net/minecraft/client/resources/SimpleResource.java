@@ -1,0 +1,117 @@
+package net.minecraft.client.resources;
+
+import com.google.common.collect.Maps;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.Map;
+import net.minecraft.client.resources.data.IMetadataSection;
+import net.minecraft.client.resources.data.IMetadataSerializer;
+import net.minecraft.util.ResourceLocation;
+import org.apache.commons.io.IOUtils;
+
+public class SimpleResource implements IResource {
+   private boolean mcmetaJsonChecked;
+   private final Map<String, IMetadataSection> mapMetadataSections = Maps.newHashMap();
+   private final String resourcePackName;
+   private final ResourceLocation srResourceLocation;
+   private final InputStream resourceInputStream;
+   private JsonObject mcmetaJson;
+   private final InputStream mcmetaInputStream;
+   private final IMetadataSerializer srMetadataSerializer;
+
+   @Override
+   public <T extends IMetadataSection> T getMetadata(String text) {
+      if (!this.hasMetadata()) {
+         return null;
+      }
+
+      if (this.mcmetaJson == null && !this.mcmetaJsonChecked) {
+         this.mcmetaJsonChecked = true;
+         BufferedReader bufferedReader = null;
+
+         try {
+            bufferedReader = new BufferedReader(new InputStreamReader(this.mcmetaInputStream));
+            this.mcmetaJson = new JsonParser().parse(bufferedReader).getAsJsonObject();
+         } finally {
+            IOUtils.closeQuietly(bufferedReader);
+         }
+      }
+
+      IMetadataSection iMetadataSection = this.mapMetadataSections.get(text);
+      if (iMetadataSection == null) {
+         iMetadataSection = this.srMetadataSerializer.parseMetadataSection(text, this.mcmetaJson);
+      }
+
+      return (T)iMetadataSection;
+   }
+
+   @Override
+   public InputStream getInputStream() {
+      return this.resourceInputStream;
+   }
+
+   @Override
+   public ResourceLocation getResourceLocation() {
+      return this.srResourceLocation;
+   }
+
+   public SimpleResource(
+      String resourcePackNameIn,
+      ResourceLocation srResourceLocationIn,
+      InputStream resourceInputStreamIn,
+      InputStream mcmetaInputStreamIn,
+      IMetadataSerializer srMetadataSerializerIn
+   ) {
+      this.resourcePackName = resourcePackNameIn;
+      this.srResourceLocation = srResourceLocationIn;
+      this.resourceInputStream = resourceInputStreamIn;
+      this.mcmetaInputStream = mcmetaInputStreamIn;
+      this.srMetadataSerializer = srMetadataSerializerIn;
+   }
+
+   @Override
+   public int hashCode() {
+      int i = this.resourcePackName != null ? this.resourcePackName.hashCode() : 0;
+      return 31 * i + (this.srResourceLocation != null ? this.srResourceLocation.hashCode() : 0);
+   }
+
+   @Override
+   public boolean equals(Object arg1) {
+      if (this == arg1) {
+         return true;
+      } else if (!(arg1 instanceof SimpleResource simpleResource)) {
+         return false;
+      } else {
+         if (this.srResourceLocation != null) {
+            if (!this.srResourceLocation.equals(simpleResource.srResourceLocation)) {
+               return false;
+            }
+         } else if (simpleResource.srResourceLocation != null) {
+            return false;
+         }
+
+         if (this.resourcePackName != null) {
+            if (!this.resourcePackName.equals(simpleResource.resourcePackName)) {
+               return false;
+            }
+         } else if (simpleResource.resourcePackName != null) {
+            return false;
+         }
+
+         return true;
+      }
+   }
+
+   @Override
+   public String getResourcePackName() {
+      return this.resourcePackName;
+   }
+
+   @Override
+   public boolean hasMetadata() {
+      return this.mcmetaInputStream != null;
+   }
+}
