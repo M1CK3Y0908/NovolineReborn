@@ -245,4 +245,203 @@ public class RotationUtils {
          return arg1.canBeCollidedWith();
       }
    }
+
+   public static float clampPitch(float pitch) {
+      return MathHelper.clamp_float(pitch, -90.0f, 90.0f);
+   }
+
+   public static float[] fixSensitivity(float yaw, float pitch, float lastYaw, float lastPitch) {
+      float f5 = yaw - lastYaw;
+      float f7 = pitch - lastPitch;
+      float f8 = minecraft.gameSettings.mouseSensitivity * 0.6f + 0.2f;
+      double d = (double)(f8 * f8 * f8) * 1.2;
+      float f9 = (float)((double)Math.round((double)f5 / d) * d);
+      float f10 = (float)((double)Math.round((double)f7 / d) * d);
+      yaw = lastYaw + f9;
+      pitch = lastPitch + f10;
+      return new float[]{yaw, clampPitch(pitch)};
+   }
+
+   public static float yawBetween(double fromX, double fromZ, double toX, double toZ) {
+      double d7 = Math.atan2(toX - fromX, toZ - fromZ) * (double)57.29578f;
+      return (float)(-d7);
+   }
+
+   public static float yawTo(double x, double z) {
+      if (minecraft.thePlayer == null) return 0.0f;
+      return yawBetween(minecraft.thePlayer.posX, minecraft.thePlayer.posZ, x, z);
+   }
+
+   public static double yawDifference(Entity entity, float currentYaw) {
+      float f2 = yawTo(entity.posX, entity.posZ);
+      return MathHelper.wrapAngleTo180_double((double)(f2 - currentYaw));
+   }
+
+   public static double absYawDifference(Entity entity, float currentYaw) {
+      return Math.abs(yawDifference(entity, currentYaw));
+   }
+
+   public static float[] fromDelta(double dx, double dy, double dz) {
+      double d4 = Math.sqrt(dx * dx + dz * dz);
+      float f = (float)(Math.atan2(dz, dx) * (double)57.29578f) - 90.0f;
+      float f2 = (float)(-(Math.atan2(dy, d4) * (double)57.29578f));
+      float curYaw = minecraft.thePlayer != null ? minecraft.thePlayer.rotationYaw : 0.0f;
+      float curPitch = minecraft.thePlayer != null ? minecraft.thePlayer.rotationPitch : 0.0f;
+      f = curYaw + MathHelper.wrapAngleTo180_float(f - curYaw);
+      f2 = clampPitch(curPitch + MathHelper.wrapAngleTo180_float(f2 - curPitch));
+      return new float[]{f, f2};
+   }
+
+   public static float[] toVec(Vec3 vec3) {
+      if (minecraft.thePlayer == null) return new float[]{0.0f, 0.0f};
+      double x = minecraft.thePlayer.posX;
+      double y = minecraft.thePlayer.posY + (double)minecraft.thePlayer.getEyeHeight();
+      double z = minecraft.thePlayer.posZ;
+      if (vec3.xCoord == x && vec3.yCoord == y && vec3.zCoord == z) {
+         return new float[]{minecraft.thePlayer.rotationYaw, minecraft.thePlayer.rotationPitch};
+      }
+      return fromDelta(vec3.xCoord - x, vec3.yCoord - y, vec3.zCoord - z);
+   }
+
+   public static float[] toEntityBox(Entity entity) {
+      if (entity == null) {
+         return null;
+      }
+      return toBox(entity, entity.getEntityBoundingBox());
+   }
+
+   public static float[] toBox(Entity entity, AxisAlignedBB box) {
+      if (minecraft.thePlayer == null || entity == null || box == null) {
+         return null;
+      }
+      Vec3 eyes = minecraft.thePlayer.getPositionEyes(1.0f);
+      float f = entity.getCollisionBorderSize();
+      box = box.expand(f, f, f);
+      if (box.isVecInside(eyes)) {
+         return new float[]{minecraft.thePlayer.rotationYaw, minecraft.thePlayer.rotationPitch};
+      }
+      Vec3 p = aimPoint(eyes, box);
+      return fromDelta(p.xCoord - eyes.xCoord, p.yCoord - eyes.yCoord, p.zCoord - eyes.zCoord);
+   }
+
+   public static Vec3 aimPoint(Vec3 eyes, AxisAlignedBB box) {
+      double cx = (box.minX + box.maxX) / 2.0;
+      double cy = box.minY + (box.maxY - box.minY) * 0.825;
+      double cz = (box.minZ + box.maxZ) / 2.0;
+
+      double d5 = 0.03;
+      double px = MathHelper.clamp_double(eyes.xCoord, box.minX + d5, box.maxX - d5);
+      double py = MathHelper.clamp_double(eyes.yCoord, box.minY + d5, box.maxY - d5);
+      double pz = MathHelper.clamp_double(eyes.zCoord, box.minZ + d5, box.maxZ - d5);
+
+      return new Vec3(px, py, pz);
+   }
+
+   public static boolean clearLine(Vec3 from, Vec3 to) {
+      if (minecraft.theWorld == null) return false;
+      MovingObjectPosition hit = minecraft.theWorld.rayTraceBlocks(from, to, false, true, false);
+      return hit == null || hit.typeOfHit != MovingObjectType.BLOCK;
+   }
+
+   public static Vec3 visiblePoint(Entity entity) {
+      if (minecraft.thePlayer == null || entity == null) return null;
+      Vec3 eyes = minecraft.thePlayer.getPositionEyes(1.0f);
+      float f = entity.getCollisionBorderSize();
+      AxisAlignedBB box = entity.getEntityBoundingBox().expand(f, f, f);
+      if (box.isVecInside(eyes)) {
+         return eyes;
+      }
+      Vec3 p = aimPoint(eyes, box);
+      if (clearLine(eyes, p)) {
+         return p;
+      }
+      return fallbackPoint(entity, eyes);
+   }
+
+   public static Vec3 fallbackPoint(Entity entity, Vec3 eyes) {
+      double x = entity.posX;
+      double y = entity.posY;
+      double z = entity.posZ;
+      double eye = entity.getEyeHeight();
+      double h1 = eye - 0.2;
+      double h2 = eye - 0.9;
+      double h3 = eye - 1.5;
+      double o = 0.28;
+      Vec3[] points = {
+         new Vec3(x, y + (eye + 0.2), z),
+         new Vec3(x, y + (eye - 0.6), z),
+         new Vec3(x, y + h2, z),
+         new Vec3(x, y + (eye - 1.2), z),
+         new Vec3(x, y + h3, z),
+         new Vec3(x + o, y + h1, z + o),
+         new Vec3(x + o, y + h1, z - o),
+         new Vec3(x - o, y + h1, z + o),
+         new Vec3(x - o, y + h1, z - o),
+         new Vec3(x + o, y + h2, z + o),
+         new Vec3(x + o, y + h2, z - o),
+         new Vec3(x - o, y + h2, z + o),
+         new Vec3(x - o, y + h2, z - o),
+         new Vec3(x + o, y + h3, z + o),
+         new Vec3(x + o, y + h3, z - o),
+         new Vec3(x - o, y + h3, z + o),
+         new Vec3(x - o, y + h3, z - o)
+      };
+      for (Vec3 p : points) {
+         if (clearLine(eyes, p)) {
+            return p;
+         }
+      }
+      return null;
+   }
+
+   public static boolean canSee(Entity entity) {
+      if (minecraft.thePlayer == null || entity == null) return false;
+      Vec3 eyes = minecraft.thePlayer.getPositionEyes(1.0f);
+      double x = entity.posX;
+      double y = entity.posY;
+      double z = entity.posZ;
+      double h = (double)entity.getEyeHeight() - 0.2;
+      if (clearLine(eyes, new Vec3(x + 0.3, y + h, z))) return true;
+      if (clearLine(eyes, new Vec3(x - 0.3, y + h, z))) return true;
+      if (clearLine(eyes, new Vec3(x, y + h, z + 0.3))) return true;
+      if (clearLine(eyes, new Vec3(x, y + h, z - 0.3))) return true;
+      for (double d = (double)entity.getEyeHeight() + 0.2; d > 0.0; d -= 0.2) {
+         if (clearLine(eyes, new Vec3(x, y + d, z))) return true;
+      }
+      return false;
+   }
+
+   public static boolean rayHits(Entity entity, AxisAlignedBB box, float yaw, float pitch, double range) {
+      if (minecraft.thePlayer == null || entity == null || !entity.canBeCollidedWith()) {
+         return false;
+      }
+      Vec3 from = minecraft.thePlayer.getPositionEyes(1.0f);
+      Vec3 dir = getVectorForRotation(yaw, pitch);
+      Vec3 to = from.addVector(dir.xCoord * range, dir.yCoord * range, dir.zCoord * range);
+      float f = entity.getCollisionBorderSize();
+      box = box.expand(f, f, f);
+      return box.calculateIntercept(from, to) != null;
+   }
+
+   public static boolean rayHits(Entity entity, float yaw, float pitch, double range) {
+      if (entity == null) return false;
+      return rayHits(entity, entity.getEntityBoundingBox(), yaw, pitch, range);
+   }
+
+   public static boolean rayHits(Entity entity, double range) {
+      float[] r = toEntityBox(entity);
+      if (r == null) return false;
+      return rayHits(entity, r[0], r[1], range);
+   }
+
+   public static MovingObjectPosition rayTraceEntity(Entity entity, double reach, float yaw, float pitch) {
+      if (minecraft.thePlayer == null || entity == null) return null;
+      Vec3 eyes = minecraft.thePlayer.getPositionEyes(1.0f);
+      Vec3 dir = getVectorForRotation(yaw, pitch);
+      Vec3 to = eyes.addVector(dir.xCoord * reach, dir.yCoord * reach, dir.zCoord * reach);
+      float f = entity.getCollisionBorderSize();
+      AxisAlignedBB box = entity.getEntityBoundingBox().expand(f, f, f);
+      return box.calculateIntercept(eyes, to);
+   }
+
 }

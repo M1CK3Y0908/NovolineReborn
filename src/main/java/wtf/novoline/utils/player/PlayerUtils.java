@@ -16,6 +16,12 @@ import net.minecraft.util.BlockPos;
 import net.minecraft.util.MathHelper;
 import net.minecraft.util.MovementInput;
 import wtf.novoline.event.MoveFlyingEvent;
+import net.minecraft.command.ICommandSender;
+import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemAxe;
+import net.minecraft.item.ItemSword;
+import wtf.novoline.utils.combat.RotationUtils;
 
 public class PlayerUtils {
    private static final Minecraft minecraft = Minecraft.getMinecraft();
@@ -334,4 +340,53 @@ public class PlayerUtils {
          minecraft.thePlayer.motionZ += f3 * f7 + f4 * f6;
       }
    }
+
+   public static boolean inTeam(ICommandSender entity0, ICommandSender entity1) {
+      if (entity0 == null || entity1 == null) return false;
+      String s = "§" + teamColor(entity0);
+      return entity0.getDisplayName().getFormattedText().contains(s)
+            && entity1.getDisplayName().getFormattedText().contains(s);
+   }
+
+   public static boolean inTeamWithMinecraftPlayer(ICommandSender entity) {
+      if (minecraft.thePlayer == null || entity == null) return false;
+      return inTeam(minecraft.thePlayer, entity);
+   }
+
+   public static String teamColor(ICommandSender player) {
+      Matcher matcher = Pattern.compile("§(.).*§r").matcher(player.getDisplayName().getFormattedText());
+      return matcher.find() ? matcher.group(1) : "f";
+   }
+
+   public static boolean inFov(float fov, Entity entity) {
+      if (minecraft.thePlayer == null || entity == null) return false;
+      float[] rot = RotationUtils.toEntityBox(entity);
+      if (rot == null) return false;
+      float diffYaw = MathHelper.wrapAngleTo180_float(minecraft.thePlayer.rotationYaw - rot[0]);
+      return Math.abs(diffYaw) <= fov / 2.0f;
+   }
+
+   public static boolean isInvisibleUnarmoured(EntityLivingBase entity) {
+      if (entity == null || !entity.isInvisible()) {
+         return false;
+      }
+      for (int i = 0; i <= 4; ++i) {
+         if (entity.getEquipmentInSlot(i) != null) {
+            return false;
+         }
+      }
+      return true;
+   }
+
+   public static boolean holdingSword() {
+      if (minecraft.thePlayer == null || minecraft.thePlayer.getHeldItem() == null) return false;
+      return minecraft.thePlayer.getHeldItem().getItem() instanceof ItemSword;
+   }
+
+   public static boolean holdingWeapon() {
+      if (minecraft.thePlayer == null || minecraft.thePlayer.getHeldItem() == null) return false;
+      Item item = minecraft.thePlayer.getHeldItem().getItem();
+      return item instanceof ItemSword || item instanceof ItemAxe;
+   }
+
 }

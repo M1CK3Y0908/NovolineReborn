@@ -10,9 +10,10 @@ Write-Host "=========================================="
 
 # 1. Update BUILD_DATE in Novoline.java if needed
 $novoFile = Join-Path $ProjectRoot "src\main\java\wtf\novoline\Novoline.java"
-$novoContent = [System.IO.File]::ReadAllText($novoFile, [System.Text.Encoding]::UTF8)
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+$novoContent = [System.IO.File]::ReadAllText($novoFile, $utf8NoBom)
 $novoContent = $novoContent -replace 'public static final String BUILD_DATE = ".*?";', "public static final String BUILD_DATE = `"$buildDate`";"
-[System.IO.File]::WriteAllText($novoFile, $novoContent, [System.Text.Encoding]::UTF8)
+[System.IO.File]::WriteAllText($novoFile, $novoContent, $utf8NoBom)
 
 # 2. Compile and package fat jar
 Push-Location $ProjectRoot
@@ -61,7 +62,7 @@ if (Test-Path $ratRoot) {
         New-Item -ItemType Directory -Path $ratToday -Force | Out-Null
     }
     Copy-Item $distJar "$ratToday\Release-$buildDate.jar" -Force
-    if (Test-Path "$rat111426\Release-111426.json" -and -not (Test-Path "$ratToday\Release-$buildDate.json")) {
+    if ((Test-Path "$rat111426\Release-111426.json") -and (-not (Test-Path "$ratToday\Release-$buildDate.json"))) {
         $json = Get-Content "$rat111426\Release-111426.json" -Raw
         $json = $json -replace "Release-111426", "Release-$buildDate"
         Set-Content -Path "$ratToday\Release-$buildDate.json" -Value $json -Encoding UTF8
