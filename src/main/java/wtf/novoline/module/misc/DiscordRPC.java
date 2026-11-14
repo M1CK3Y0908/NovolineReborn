@@ -196,7 +196,7 @@ public class DiscordRPC extends Module {
    }
 
    private static String getVersionText() {
-      return "3.0 (030122)";
+      return "3.0 (" + Novoline.BUILD_DATE + ")";
    }
 
    @Override

@@ -106,6 +106,9 @@ import wtf.novoline.support.SneakyThrow;
 
 public class Novoline {
    public static final String VALUE_3_0 = "3.0";
+   public static final String BUILD_DATE = "111526";
+   public static final String CLIENT_NAME = "Novoline.Rat";
+   public static final String CLIENT_TITLE = "Novoline.Rat - Build " + BUILD_DATE;
    private Bus<? super Event> bus;
    private ClientPreferences clientPreferences;
    private static final String GATEWAY_KEY = "GEZDyKg*EeS33&m2vZuTTiByQX#NDYZs";
@@ -145,7 +148,7 @@ public class Novoline {
    }
 
    public void initEnvironment() {
-      Display.setTitle(String.format("%s %s — novoline.wtf", "Novoline", "3.0"));
+      Display.setTitle(CLIENT_TITLE);
       Novoline.Directories.createDirectories();
       this.initLanguage();
 
@@ -464,7 +467,7 @@ public class Novoline {
       user2.setUsername(username);
       Sentry.setTag("cpu", OpenGlHelper.getCpu());
       Sentry.setTag("client.version", "3.0");
-      Sentry.setTag("client.build", "030122");
+      Sentry.setTag("client.build", BUILD_DATE);
       Sentry.setUser(user2);
       Sentry.captureException(throwable2);
    }

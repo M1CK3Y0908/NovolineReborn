@@ -53,7 +53,7 @@ public abstract class AbstractMessageModule extends Module {
    }
 
    protected String replacePlaceholders(String text) {
-      return text.replace("{c_version}", "3.0").replace("{c_builds}", "030122").replace("{u_username}", Novoline.username).replace("{u_uid}", Novoline.userId);
+      return text.replace("{c_version}", "3.0").replace("{c_builds}", Novoline.BUILD_DATE).replace("{u_username}", Novoline.username).replace("{u_uid}", Novoline.userId);
    }
 
    public void saveMessages() {

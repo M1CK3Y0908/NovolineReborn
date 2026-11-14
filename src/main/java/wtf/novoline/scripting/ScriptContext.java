@@ -327,7 +327,7 @@ public class ScriptContext extends HashMap<String, Object> {
          scriptValue.put("C_name", "Novoline");
          scriptValue.put("C_channel", "Release");
          scriptValue.put("C_version", "3.0");
-         scriptValue.put("C_build", "030122");
+         scriptValue.put("C_build", Novoline.BUILD_DATE);
          scriptValue.putSupplier("C_getLanguage", () -> ValueUtils.lowerCaseName(Novoline.getNovoline().getRuRuType()));
          scriptValue.put("C_Directories_ROOT", Directories.ROOT_DIR);
          scriptValue.put("C_Directories_STORAGE", Directories.STORAGE_DIR);

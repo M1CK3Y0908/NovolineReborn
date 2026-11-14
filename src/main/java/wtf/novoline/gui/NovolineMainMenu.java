@@ -114,7 +114,7 @@ public class NovolineMainMenu extends GuiScreen {
       this.menuBackgroundShader.draw(scaledResolution);
       this.blurRenderer.blur("mm-blur", this.mc.getFramebuffer(), scaledResolution, 10, 0.6F, 1);
       this.mc.getFramebuffer().bindFramebuffer(true);
-      ResourceLocation resourceLocation = new ResourceLocation("novoline", "images/novoline_blue.png");
+      ResourceLocation resourceLocation = new ResourceLocation("novoline", "images/novoline_purple.png");
       GlStateManager.enableBlend();
       GlStateManager.enableAlpha();
       GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
@@ -122,7 +122,7 @@ public class NovolineMainMenu extends GuiScreen {
       GlStateManager.disableAlpha();
       GlStateManager.disableBlend();
       Fonts.rubikRegularSize14
-         .drawString(Language.translate("main_menu.gui.release_build", "3.0"), 5.0F, this.height - 20, new Color(255, 255, 255, 150).getRGB());
+         .drawString(Language.translate("main_menu.gui.release_build", Novoline.BUILD_DATE), 5.0F, this.height - 20, new Color(255, 255, 255, 150).getRGB());
       super.drawScreen(i, i2, f);
       this.blurRenderer.releaseResult();
    }
